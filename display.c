@@ -26,6 +26,6 @@ void disp_board(board game) {
 }
 
 void disp_error(char * message) {
-    printf("\033[1;31mERROR\n\033[0;31m%s\n\033[0m", message);
+    printf("\033[101mERREUR\033[49m\n\033[1;31m%s\n\033[0m", message);
 
 }
