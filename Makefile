@@ -8,4 +8,4 @@ game.o: board.h display.h game.c
 	gcc -Wall -c game.c
 
 clean:
-	rm display.o board.o game.o
+	rm display.o game.o
