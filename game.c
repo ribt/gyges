@@ -2,10 +2,8 @@
 #include <stdlib.h>
 #include "board.h"
 #include "display.h"
-#define DIMENSION 6
-#define NB_SIZE 3
-#define NB_PLAYERS 2
-#define NB_INITIAL_PIECES 2
+
+
 void firstphase(board game){
 	int pawn = -1;
 	int column = -1;
