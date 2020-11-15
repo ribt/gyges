@@ -24,3 +24,8 @@ void disp_board(board game) {
     }
     printf("\033[0;90m │   │   │   │   │   │\n └───┴───┴\033[0m(S)\033[0;90m┴───┴───┘\033[0m\n");
 }
+
+void disp_error(char * message) {
+    printf("\033[1;31mERROR\n\033[0;31m%s\n\033[0m", message);
+
+}
