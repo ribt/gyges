@@ -2,9 +2,10 @@
 #include "board.h"
 
 void disp_board(board game) {
-    printf("\033[0;90m ┌───┬───┬\033[0m(N)\033[0;90m┬───┬───┐\n");
-    printf(" │   │   │   │   │   │\n");
-    for (int line = 0; line < DIMENSION; line++) {
+    printf("                \033[0;90m(N)\n       ┌───┬───┬\033[0m o \033[0;90m┬───┬───┐\n");
+    printf("       │   │   │   │   │   │\n");
+    for (int line = DIMENSION-1; line >= 0; line--) {
+        printf("      ");
         for (int column = 0; column < DIMENSION; column++) {
             printf("\033[0m ");
             switch (get_piece_size(game, line, column)) {
@@ -18,11 +19,11 @@ void disp_board(board game) {
             }    
         }
         printf("\n");
-        if (line < DIMENSION-1) {
-            printf("\033[0;90m |   |   |   |   |   |\n");
+        if (line > 0) {
+            printf("      \033[0;90m |   |   |   |   |   |\n");
         }
     }
-    printf("\033[0;90m │   │   │   │   │   │\n └───┴───┴\033[0m(S)\033[0;90m┴───┴───┘\033[0m\n");
+    printf("      \033[0;90m │   │   │   │   │   │\n       └───┴───┴\033[0m o \033[0;90m┴───┴───┘\n                (S)\033[0m\n");
 }
 
 void disp_error(char * message) {
