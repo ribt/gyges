@@ -2,49 +2,41 @@
 #include <stdlib.h>
 #include "board.h"
 #include "display.h"
-void firstphase(board game){
-	int pawn_size;
-	int column;
-	int check = 0;
-	for(int i = 0; i < DIMENSION; i++){
-		while(check == 0){
-			printf("C'est au joueur Sud de jouer. Quel pion voulez vous jouer ?\n1/2/3 :");
-			scanf("%d", &pawn_size);
-			if(nb_pieces_available(game, pawn_size, SOUTH_P) > 0){check = 1;};
-			if(check == 0){printf("La pion n'est pas disponible\n");};
-		}
-		check = 0;
-		printf("Il vous reste %d pion(s) de %d.\n",nb_pieces_available(game, pawn_size, SOUTH_P), pawn_size);
-		while(check == 0){
-			printf("Sur quelle colonne voulez vous jouer ?\n");
-			scanf("%d", &column);
-			if(place_piece(game, pawn_size, SOUTH_P, column - 1) == OK){check = 1;};
-			if(check == 0){printf("La pion n'est pas disponible\n");};
-		}
-		printf("Le pion de %d a été posé en (%d,1).\n", pawn_size, column);
-		next_player(SOUTH_P);
-		disp_board(game);
-		check = 0;
-		while(check == 0){
-			printf("C'est au joueur Nord de jouer. Quel pion voulez vous jouer ?\n1/2/3 :");
-			scanf("%d", &pawn_size);
-			if(nb_pieces_available(game, pawn_size, NORTH_P) > 0){check = 1;};
-			if(check == 0){printf("La pion n'est pas disponible\n");};
-		}
-		check = 0;
-		printf("Il vous reste %d pion(s) de %d.\n",nb_pieces_available(game, pawn_size, NORTH_P), pawn_size);
-		while(check == 0){
-			printf("Sur quelle colonne voulez vous jouer ?\n");
-			scanf("%d", &column);
-			if(place_piece(game, pawn_size, NORTH_P, column - 1) == OK){check = 1;};
-			if(check == 0){printf("La pion n'est pas disponible\n");};
-		}
-		printf("Le pion de %d a été posé en (%d,1).\n", pawn_size, column);
-		next_player(NORTH_P);
-		disp_board(game);
+
+int initializetable(int table[],int size, int value){
+	for(int i = 0; i < size; i++){
+		table[i] = value;
 	}
 }
 
+void firstphase(board game){
+	int allpawn[NB_SIZE];
+	int fisrtplay[DIMENSION];
+	for(int k = 0; k < 2; k++){	
+		initializetable(allpawn, NB_SIZE, NB_INITIAL_PIECES);
+		initializetable(fisrtplay, DIMENSION, 0);
+		int pawn_size = 0;
+		if(k == 0){	
+			printf("Joueur Nord, veuillez saisir de gauche à droite le placement de vos pions\n");
+		}else{
+			printf("Joueur Sud, veuillez saisir de gauche à droite le placement de vos pions\n");
+		}
+		for(int i = 0; i < DIMENSION; i++){
+			scanf("%d", &pawn_size);
+			while (allpawn[pawn_size-1] == 0){
+				printf("Il ne vous reste plus de pion de %d.\n", pawn_size);
+				for(int j = 0; j < DIMENSION; j++){
+					if(fisrtplay[j] > 0){printf("%d\n", fisrtplay[j]);}
+				}
+				scanf("%d", &pawn_size);
+			}
+			fisrtplay[i] = pawn_size;
+			allpawn[pawn_size-1] -= 1;
+			place_piece(game, pawn_size, k+1, i);
+		}
+		disp_board(game);
+	}
+}
 
 
 int main(void){
