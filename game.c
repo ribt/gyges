@@ -10,11 +10,11 @@ int initializetable(int table[],int size, int value){
 }
 
 void firstphase(board game){
-	int allpawn[NB_SIZE];
-	int fisrtplay[DIMENSION];
+	int allpawn[NB_SIZE];		//Allows to check if the pawn is available.
+	int historymoves[DIMENSION];	//Temporarily keep the player's moves.
 	for(int k = 0; k < 2; k++){	
 		initializetable(allpawn, NB_SIZE, NB_INITIAL_PIECES);
-		initializetable(fisrtplay, DIMENSION, 0);
+		initializetable(historymoves, DIMENSION, 0);
 		int pawn_size = 0;
 		if(k == 0){	
 			printf("Joueur Nord, veuillez saisir de gauche à droite le placement de vos pions\n");
@@ -23,18 +23,18 @@ void firstphase(board game){
 		}
 		for(int i = 0; i < DIMENSION; i++){
 			scanf("%d", &pawn_size);
-			while (allpawn[pawn_size-1] == 0){
+			while (allpawn[pawn_size-1] == 0){		//Check if the pawn is available. 
 				printf("Il ne vous reste plus de pion de %d.\n", pawn_size);
-				for(int j = 0; j < DIMENSION; j++){
-					if(fisrtplay[j] > 0){printf("%d\n", fisrtplay[j]);}
+				for(int j = 0; j < DIMENSION; j++){	//Displays all his moves since the beginning of the first phase to remind him. 
+					if(historymoves[j] > 0){printf("%d\n", historymoves[j]);}
 				}
 				scanf("%d", &pawn_size);
 			}
-			fisrtplay[i] = pawn_size;
-			allpawn[pawn_size-1] -= 1;
-			place_piece(game, pawn_size, k+1, i);
+			historymoves[i] = pawn_size;	//Updates the history of his moves
+			allpawn[pawn_size-1] -= 1;	//Updates moves
+			place_piece(game, pawn_size, k+1, i);	//Places the pawn on the board
 		}
-		disp_board(game);
+		disp_board(game);	//Displays the board
 	}
 }
 
