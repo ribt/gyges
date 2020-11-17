@@ -22,7 +22,8 @@ void firstphase(board game){
 			scanf("%d", &pawn_size);
 			while (allpawn[pawn_size-1] == 0 || pawn_size > 4 || pawn_size < 1){	//Check if the pawn is available.
 				printf("\033[H\033[2J");	//clear output screen 
-				printf("Il ne vous reste plus de pion de %d.\n", pawn_size);
+				if(pawn_size > 0 && pawn_size < 4){printf("Il ne vous reste plus de pion de %d.\n", pawn_size);
+				}else{printf("Ce pion n'existe pas.\n");}
 				for(int j = 0; j < DIMENSION; j++){	//Displays all his moves since the beginning of the first phase. 
 					if(historymoves[j] > 0){printf("%d ", historymoves[j]);}
 				}
