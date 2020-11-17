@@ -2,7 +2,7 @@
 #include "board.h"
 
 void disp_board(board game) {
-    printf("                \033[0;90m(N)\n       ┌───┬───┬\033[0m o \033[0;90m┬───┬───┐\n");
+    printf("               \033[0;90mNord\n       ┌───┬───┬\033[1;0m o \033[0;90m┬───┬───┐\n");
     printf("       │   │   │   │   │   │\n");
     for (int line = DIMENSION-1; line >= 0; line--) {
         printf("      ");
@@ -23,10 +23,16 @@ void disp_board(board game) {
             printf("      \033[0;90m |   |   |   |   |   |\n");
         }
     }
-    printf("      \033[0;90m │   │   │   │   │   │\n       └───┴───┴\033[0m o \033[0;90m┴───┴───┘\n                (S)\033[0m\n");
+    printf("      \033[0;90m │   │   │   │   │   │\n       └───┴───┴\033[0m o \033[0;90m┴───┴───┘\n                Sud\033[0m\n");
 }
 
 void disp_error(char * message) {
     printf("\033[101mERREUR\033[49m\n\033[1;31m%s\n\033[0m", message);
+}
 
+void disp_player_name(player this_player) {
+    if (this_player == SOUTH_P)
+        printf("SUD");
+    if (this_player == NORTH_P)
+        printf("NORD");
 }
