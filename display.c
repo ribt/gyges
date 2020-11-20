@@ -1,7 +1,8 @@
 #include <stdio.h>
 #include <unistd.h>
 #include "board.h"
-#include "display.h"
+
+#define clear_screen() printf("\033[H\033[2J")
 
 void disp_board(board game) {
     int piece_size;
