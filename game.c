@@ -54,7 +54,7 @@ void init_board(board game){
 
 			moves_history[i] = piece_size;	//Updates the history of his moves
 			all_pieces[piece_size-1] -= 1;	//Updates moves
-			place_piece(game, piece_size, k+1, i);	//Places the piece on the board
+			place_piece(game, piece_size, current_player+1, i);	//Places the piece on the board
 			clear_screen();
 			disp_board(game);
 
