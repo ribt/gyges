@@ -25,6 +25,7 @@ void disp_board(board game) {
                 case ONE: printf("\033[1;34m1 "); break;   // blue and bold
                 case TWO: printf("\033[1;33m2 "); break;   // yellow and bold
                 case THREE: printf("\033[1;31m3 "); break; // red and bold
+                default: printf("* ");
             }
             if (column == DIMENSION-1) {
                 printf("\033[0;90m│");
@@ -46,9 +47,12 @@ void disp_error(char * message) {
     // \033[0m -> regular text after this print
 }
 
-void disp_player_name(player this_player) {
-    if (this_player == SOUTH_P)
-        printf("SUD");
-    if (this_player == NORTH_P)
-        printf("NORD");
+char * player_name(player this_player) {
+    if (this_player == SOUTH_P) {
+        return "Sud";
+    }
+    if (this_player == NORTH_P) {
+        return "Nord";
+    }
+    return "inconnu";
 }

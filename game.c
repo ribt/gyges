@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include "board.h"
 #include "display.h"
 
@@ -12,75 +13,73 @@ void fill_array(int array[], int size, int value){
 	}
 }
 
-void init_board(board game){
-	int all_pieces[NB_SIZE];	//Allows to check if the piece is available.
-	int moves_history[DIMENSION];	//Temporarily keep the player's moves.
+void init_game(board game, int *pcurrent_player){
+	int nbr_remaining_p_size[NB_SIZE];	// Allows to check if the piece is available.
+	int moves_history[DIMENSION];	// Temporarily keep the player's moves.
+	int column, piece_size;
 
-	for (int current_player = 0; current_player < NB_PLAYERS; current_player++) {	//Does the same for both players
-		int piece_size = 0;
+	srand(time(NULL));
+
+	if (rand()%2 == 0) {  // random choice of the first player
+		*pcurrent_player = NORTH_P;
+	} else {
+		*pcurrent_player = SOUTH_P;
+	}
+
+	for (int i = 0; i < NB_PLAYERS; i++) {	// do the same for all players
+		piece_size = -1;
+
+		fill_array(nbr_remaining_p_size, NB_SIZE, NB_INITIAL_PIECES);
+		fill_array(moves_history, DIMENSION, 0);
+
+		clear_screen();
 
 		disp_board(game);
-
-		fill_array(all_pieces, NB_SIZE, NB_INITIAL_PIECES);
-		fill_array(moves_history, DIMENSION, 0);
 		
-		if (current_player == 0) {
-			printf("Joueur Sud, veuillez saisir un par un, de gauche à droite le placement de vos pions puis valider avec entrée.\n");
-		} else {
-			printf("Joueur Nord, veuillez saisir un par un,de gauche à droite le placement de vos pions puis valider avec entrée.\n");
-		}
+		printf("Joueur %s, veuillez choisir de gauche à droite la taille des pièces à mettre sur votre première ligne.\nValidez avec entrée pour chaque pièce.\n", player_name(*pcurrent_player));
 
-		for (int i = 0; i < DIMENSION; i++) {	//To place as many pieces as there are columns
+		column = 0;
+
+		while (column < DIMENSION) {  // place the pieces column by column
 			scanf("%d", &piece_size);
 			clear_buffer();
-			while (all_pieces[piece_size-1] == 0 || piece_size > 3 || piece_size < 1) {	//Check if the piece is available.
-				clear_screen();
-				disp_board(game);
-
-				if (piece_size > 0 && piece_size < 4) {
-					printf("Il ne vous reste plus de pion de %d.\n", piece_size);
-				} else {
-					printf("Ce pion n'existe pas.\n");
-				}
-
-				for (int j = 0; j < DIMENSION; j++) {	//Displays all his moves since the beginning of the first phase. 
-					if (moves_history[j] > 0) {
-						printf("%d ", moves_history[j]);
-					}
-				}
-				scanf("%d", &piece_size);
-				clear_buffer();
-			}
-
-			moves_history[i] = piece_size;	//Updates the history of his moves
-			all_pieces[piece_size-1] -= 1;	//Updates moves
-			place_piece(game, piece_size, current_player+1, i);	//Places the piece on the board
 			clear_screen();
-			disp_board(game);
-
-			if (current_player == 0){
-				printf("Joueur Sud, veuillez saisir de gauche à droite le placement de vos pions\n");
-			} else {
-				printf("Joueur Nord, veuillez saisir de gauche à droite le placement de vos pions\n");
+			
+			if (piece_size > NB_SIZE || piece_size < 1) {
+				disp_error("Cette taille de pion n'existe pas.");
 			}
+			else if (nbr_remaining_p_size[piece_size-1] == 0) {
+				disp_error("Il ne vous reste pls de pion de cette taille-là.");
+			}
+			else {
+				moves_history[column] = piece_size;	//Updates the history of his moves
+				nbr_remaining_p_size[piece_size-1] -= 1;	//Updates available pieces
+				place_piece(game, piece_size, *pcurrent_player, column);	//Places the piece on the board
+				column++;
+			}
+
+			disp_board(game);
 
 			for (int j = 0; j < DIMENSION; j++) {	//Displays all his moves since the beginning of the first phase. 
 				if (moves_history[j] > 0) {
 					printf("%d ", moves_history[j]);
 				}
 			}
+
 		}
-		clear_screen();
+
+		*pcurrent_player = next_player(*pcurrent_player);
 	}
 }
 
 
 int main(void){
+	int current_player;
 	board game = new_game();	//To initialize the board
+
+	init_game(game, &current_player);
 	clear_screen();
-	printf("Le plateau a été correctement initialisé :\n");
-	init_board(game);
-	printf("Fin du placement des premiers pions, début du jeu\n");
+	printf("Fin du placement des premiers pièces, début du jeu\n");
 	disp_board(game);	//Displays the board
 	destroy_game(game);	
 	return 0;	//Deletes the board
