@@ -1,11 +1,11 @@
-game: display.o board.o game.o
-	gcc -Wall display.o board.o game.o -o game
+game: display.o board.o game.c
+	gcc -Wall display.o board.o game.c -o game
 
 display.o: board.h display.c
 	gcc -Wall -c display.c
 
-game.o: board.h display.h game.c
-	gcc -Wall -c game.c
+debug: display.o board.o game.c
+	gcc -Wall -D DEBUG display.o board.o game.c -o game
 
 clean:
-	rm display.o game.o
+	rm display.o

@@ -60,7 +60,6 @@ void init_game (board game, int *pcurrent_player) {
 					printf("%d ", history[j]);
 				}
 			}
-
 		}
 
 		*pcurrent_player = next_player(*pcurrent_player);
@@ -69,22 +68,19 @@ void init_game (board game, int *pcurrent_player) {
 
 void gameplay(board game, int *pcurrent_player){
 	int line;
-	int column;
+	int column = -1;
 	
 	while (get_winner(game) == NO_PLAYER) {
-		column = -1;
+		
 		if (*pcurrent_player == SOUTH_P) {
 			line = southmost_occupied_line(game);
 		} else if (*pcurrent_player == NORTH_P) {
 			line = northmost_occupied_line(game);
 		}
 		
-		printf("Joueur %s, sur quelle ligne voulez vous prendre le pion ?\n", player_name(*pcurrent_player));
-		scanf("%d",&line);
-		clear_buffer();
-		
 		while (pick_piece(game, *pcurrent_player, line, column) != OK) {
 			printf("Joeur %s, la ligne la plus proche la n°%d. Sur quelle colone voulez vous prendre le pion ?\n", player_name(*pcurrent_player), line+1);
+			column = -1;
 			scanf("%d",&column);
 			clear_buffer();
 			column--;
@@ -103,7 +99,29 @@ int main(void) {
 	int current_player;
 	board game = new_game();
 
+	#ifdef DEBUG
+
+	place_piece(game, THREE, SOUTH_P, 0);
+	place_piece(game, ONE, SOUTH_P, 1);
+	place_piece(game, TWO, SOUTH_P, 2);
+	place_piece(game, THREE, SOUTH_P, 3);
+	place_piece(game, ONE, SOUTH_P, 4);
+	place_piece(game, TWO, SOUTH_P, 5);
+
+	place_piece(game, ONE, NORTH_P, 0);
+	place_piece(game, ONE, NORTH_P, 1);
+	place_piece(game, TWO, NORTH_P, 2);
+	place_piece(game, TWO, NORTH_P, 3);
+	place_piece(game, THREE, NORTH_P, 4);
+	place_piece(game, THREE, NORTH_P, 5);
+
+	current_player = NORTH_P;
+
+	#else
+
 	init_game(game, &current_player);
+
+	#endif
 
 	clear_screen();
 	printf("Fin du placement des pièces, début du jeu\n");
