@@ -13,14 +13,6 @@ void fill(int tab[], int size, int value) {
 	}
 }
 
-void printplayer(int *pcurrent_player){
-	if(*pcurrent_player == 1){
-		*printf("Joueur Sud, ");
-	}else if(*pcurrent_player == 2){
-		printf("Joueur Nord, ");
-	}
-}
-
 void init_game(board game, int *pcurrent_player){
 	int nbr_remaining_p_size[NB_SIZE];	// allow to check if a size still is available
 	int history[DIMENSION];	// temporarily keep the player's choices
@@ -86,27 +78,25 @@ int gameplay(board game, int *pcurrent_player){
 	int line;
 	int column;
 	
-	while(get_winner(game) == NO_PLAYER){
+	while (get_winner(game) == NO_PLAYER) {
 		column = -1;
-		if(*pcurrent_player == SOUTH_P){
+		if (*pcurrent_player == SOUTH_P) {
 			line = southmost_occupied_line(game);
-		}else if(*pcurrent_player == NORTH_P){
+		} else if (*pcurrent_player == NORTH_P) {
 			line = northmost_occupied_line(game);
 		}
 		
-		printplayer(*pcurrent_player);
-		printf("Sur quelle ligne voulez vous prendre le pion ?\n");
+		printf("Joueur %s, sur quelle ligne voulez vous prendre le pion ?\n", player_name(*pcurrent_player));
 		scanf("%d",&line);
 		clear_buffer();
 		
-		while(pick_piece(game, *pcurrent_player, line, column) != OK){
-			printplayer(*pcurrent_player);
-			printf("la ligne la plus proche la n°%d. Sur quelle colone voulez vous prendre le pion ?\n", line+1);
+		while (pick_piece(game, *pcurrent_player, line, column) != OK) {
+			printf("Joeur %s, la ligne la plus proche la n°%d. Sur quelle colone voulez vous prendre le pion ?\n", player_name(*pcurrent_player), line+1);
 			scanf("%d",&column);
 			clear_buffer();
 			column--;
 			
-			if(pick_piece(game, *pcurrent_player, line, column) != OK){
+			if (pick_piece(game, *pcurrent_player, line, column) != OK) {
 				printf("La colone %d ne contient pas de pion. Veuillez reessayer.\n", column + 1);
 			}
 			
@@ -116,7 +106,7 @@ int gameplay(board game, int *pcurrent_player){
 	}
 }
 
-int main(void){
+int main(void) {
 	int current_player;
 	board game = new_game();
 
