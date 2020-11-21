@@ -48,10 +48,18 @@ void disp_error(char * message) {
 
 char * player_name(player this_player) {
     if (this_player == SOUTH_P) {
-        return "Sud";
+        return "\033[1mSud\033[0m";
     }
     if (this_player == NORTH_P) {
-        return "Nord";
+        return "\033[1mNord\033[0m";
     }
     return "inconnu";
+}
+
+char * plural(int number) {
+    if (number > 1) {
+        return "s";
+    } else {
+        return "";
+    }
 }

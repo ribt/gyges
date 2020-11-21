@@ -69,6 +69,8 @@ void init_game (board game, int *pcurrent_player) {
 void gameplay(board game, int *pcurrent_player) {
 	int line, res;
 	int column = -1;
+	int available_movments;
+	char * agreement;
 	
 	while (get_winner(game) == NO_PLAYER) {
 		
@@ -98,7 +100,9 @@ void gameplay(board game, int *pcurrent_player) {
 			disp_board(game);		
 		}
 
-		printf("%d mouvement(s) restant(s)\n", movement_left(game));
+		available_movments = movement_left(game);
+		agreement = plural(available_movments); // "s" if the number is >1
+		printf("%d mouvement%s restant%s\n", available_movments, agreement, agreement);
 
 		return; // The piece is picked. Good luck Suake to code the choice of the directions ;)
 
