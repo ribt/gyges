@@ -67,29 +67,27 @@ void init_game (board game, int *pcurrent_player) {
 }
 
 void gameplay(board game, int *pcurrent_player){
-	int line;
+	int line, res;
 	int column = -1;
 	
 	while (get_winner(game) == NO_PLAYER) {
 		
 		if (*pcurrent_player == SOUTH_P) {
 			line = southmost_occupied_line(game);
-		} else if (*pcurrent_player == NORTH_P) {
+		} else {
 			line = northmost_occupied_line(game);
 		}
-		
-		while (pick_piece(game, *pcurrent_player, line, column) != OK) {
-			printf("Joeur %s, la ligne la plus proche la n°%d. Sur quelle colone voulez vous prendre le pion ?\n", player_name(*pcurrent_player), line+1);
+
+		res = -1;		
+		while (res != OK) {
+			printf("Joueur %s, la ligne la plus proche la n°%d. Sur quelle colone voulez vous prendre le pion ?\n", player_name(*pcurrent_player), line+1);
 			column = -1;
 			scanf("%d",&column);
 			clear_buffer();
 			column--;
-			
-			if (pick_piece(game, *pcurrent_player, line, column) != OK) {
-				printf("La colone %d ne contient pas de pion. Veuillez reessayer.\n", column + 1);
-			}
-			
-			printf("Test : %d\n", pick_piece(game, *pcurrent_player, line, column));
+
+			res = pick_piece(game, *pcurrent_player, line, column);
+			printf("return code : %d\n", res);			
 		}
 		printf("Le pion selectionné se situe en (%d,%d) et comporte %d anneau(x)\n",line, column, get_piece_size(game, line, column));
 	}
