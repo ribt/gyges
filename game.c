@@ -66,7 +66,7 @@ void init_game (board game, int *pcurrent_player) {
 	}
 }
 
-void gameplay(board game, int *pcurrent_player){
+void gameplay(board game, int *pcurrent_player) {
 	int line, res;
 	int column = -1;
 	
@@ -80,20 +80,34 @@ void gameplay(board game, int *pcurrent_player){
 
 		res = -1;		
 		while (res != OK) {
-			printf("Joueur %s, la ligne la plus proche la n°%d. Sur quelle colone voulez vous prendre le pion ?\n", player_name(*pcurrent_player), line+1);
+			printf("Joueur %s, choisissez la colonne où prendre la pièce : ", player_name(*pcurrent_player));
 			column = -1;
-			scanf("%d",&column);
+			scanf("%d", &column);
 			clear_buffer();
+			clear_screen();
 			column--;
 
-			res = pick_piece(game, *pcurrent_player, line, column);
-			printf("return code : %d\n", res);			
+			res = pick_piece(game, *pcurrent_player, line, column); // != FORBIDDEN because we force the choice of the line
+			if (res == EMPTY) {
+				disp_error("Il n'y a pas de pièce à cet endroit sur la ligne la plus proche de vous.");
+			}
+			if (res == PARAM) {
+				disp_error("Ce numéro est invalide.");
+			}
+
+			disp_board(game);		
 		}
-		printf("Le pion selectionné se situe en (%d,%d) et comporte %d anneau(x)\n",line, column, get_piece_size(game, line, column));
+
+		printf("%d mouvement(s) restant(s)\n", movement_left(game));
+
+		return; // The piece is picked. Good luck Suake to code the choice of the directions ;)
+
+		*pcurrent_player = next_player(*pcurrent_player);
+		
 	}
 }
 
-int main(void) {
+int main() {
 	int current_player;
 	board game = new_game();
 
