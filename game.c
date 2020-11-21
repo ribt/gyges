@@ -13,6 +13,14 @@ void fill(int tab[], int size, int value) {
 	}
 }
 
+void printplayer(int *pcurrent_player){
+	if(*pcurrent_player == 1){
+		*printf("Joueur Sud, ");
+	}else if(*pcurrent_player == 2){
+		printf("Joueur Nord, ");
+	}
+}
+
 void init_game(board game, int *pcurrent_player){
 	int nbr_remaining_p_size[NB_SIZE];	// allow to check if a size still is available
 	int history[DIMENSION];	// temporarily keep the player's choices
@@ -51,7 +59,7 @@ void init_game(board game, int *pcurrent_player){
 				disp_error("Cette taille de pion n'existe pas.");
 			}
 			else if (nbr_remaining_p_size[piece_size-1] == 0) {
-				disp_error("Il ne vous reste pls de pion de cette taille-là.");
+				disp_error("Il ne vous reste plus de pion de cette taille-là.");
 			}
 			else {
 				history[column] = piece_size;
@@ -74,6 +82,39 @@ void init_game(board game, int *pcurrent_player){
 	}
 }
 
+int gameplay(board game, int *pcurrent_player){
+	int line;
+	int column;
+	
+	while(get_winner(game) == NO_PLAYER){
+		column = -1;
+		if(*pcurrent_player == SOUTH_P){
+			line = southmost_occupied_line(game);
+		}else if(*pcurrent_player == NORTH_P){
+			line = northmost_occupied_line(game);
+		}
+		
+		printplayer(*pcurrent_player);
+		printf("Sur quelle ligne voulez vous prendre le pion ?\n");
+		scanf("%d",&line);
+		clear_buffer();
+		
+		while(pick_piece(game, *pcurrent_player, line, column) != OK){
+			printplayer(*pcurrent_player);
+			printf("la ligne la plus proche la n°%d. Sur quelle colone voulez vous prendre le pion ?\n", line+1);
+			scanf("%d",&column);
+			clear_buffer();
+			column--;
+			
+			if(pick_piece(game, *pcurrent_player, line, column) != OK){
+				printf("La colone %d ne contient pas de pion. Veuillez reessayer.\n", column + 1);
+			}
+			
+			printf("Test : %d\n", pick_piece(game, *pcurrent_player, line, column));
+		}
+		printf("Le pion selectionné se situe en (%d,%d) et comporte %d anneau(x)\n",line, column, get_piece_size(game, line, column));
+	}
+}
 
 int main(void){
 	int current_player;
@@ -84,6 +125,8 @@ int main(void){
 	clear_screen();
 	printf("Fin du placement des pièces, début du jeu\n");
 	disp_board(game);
+
+	gameplay(game, &current_player);
 
 	destroy_game(game);
 
