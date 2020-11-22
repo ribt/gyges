@@ -109,10 +109,10 @@ void gameplay(board game, int *pcurrent_player) {
 		}
 
 		clear_screen();
-
-		while (movement_left(game) > 0) {
+		available_movments = movement_left(game);
+		while (available_movments > 0) {
 			res = -1;
-			available_movments = movement_left(game);
+			
 			agreement = plural(available_movments); // "s" if the number is >1
 
 			while (res != 1) {
@@ -143,10 +143,20 @@ void gameplay(board game, int *pcurrent_player) {
 				if (res != 1) {
 					disp_error("Vous ne pouvez pas bouger cette pièce dans cette direction.");
 				}
+				
 			}
 			move_piece (game, dir_input);
-			strcat(history, &input);
+			strncat(history, &input, 1);
 			strcat(history, " ");
+
+			available_movments = movement_left(game);
+			if (available_movments == 0) { // because board.o is buggy
+					for (int i = 1; i <= 4; i++) {
+						if (is_move_possible(game, i)) {
+							available_movments = 42; // we don't know the number
+						}
+					}
+				}
 		}
 
 
