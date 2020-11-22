@@ -54,6 +54,7 @@ void init_game (board game, int *pcurrent_player) {
 			}
 
 			disp_board(game);
+			printf("Joueur %s, veuillez choisir de gauche à droite la taille des pièces à mettre sur votre première ligne.\nValidez avec Entrée pour chaque pièce.\n> ", player_name(*pcurrent_player));
 
 			for (int j = 0; j < DIMENSION; j++) {	// display all pieces already placed
 				if (history[j] > 0) {
@@ -71,9 +72,13 @@ void gameplay(board game, int *pcurrent_player) {
 	int column = -1;
 	int available_movments;
 	char * agreement;
+	char move;
+	int check = -1;
+	int history[3];
+	int i = 0;
 	
 	while (get_winner(game) == NO_PLAYER) {
-		
+		fill(history, 3, -1);
 		if (*pcurrent_player == SOUTH_P) {
 			line = southmost_occupied_line(game);
 		} else {
@@ -99,12 +104,54 @@ void gameplay(board game, int *pcurrent_player) {
 
 			disp_board(game);		
 		}
+		while(movement_left(game) > 0){
+			check = -1;
+			move = 0;
+			available_movments = movement_left(game);
+			agreement = plural(available_movments); // "s" if the number is >1
+			while(check != 1){
+				while(move != 78 && move != 83 && move != 69 && move != 79 && move != 71){
+					printf("%d mouvement%s restant%s\n", available_movments, agreement, agreement);
+					printf("Que voulez vous faire ?\n> ");
+					for (int j = 0; j < 3; j++) {	// display all pieces already placed
+					switch (history[j]) {
+						case 2: printf("N "); break;
+						case 1: printf("S "); break;
+						case 3: printf("E "); break;
+						case 4: printf("O "); break;
+					};
+					}
+					scanf("%c", &move);
+					clear_buffer();
+					clear_screen();
+					if(move != 78 && move != 83 && move != 69 && move != 79 && move != 71){
+						disp_error("Cette direction n'existe pas.");
+					}
+					disp_board(game);
+				}
+				switch (move) {
+					case 78: move = NORTH; break;
+					case 83: move = SOUTH; break;
+					case 69: move = EAST; break;
+					case 79: move = WEST; break;
+					case 71: move = GOAL; break;
+				};
+				check = is_move_possible(game, move);
+				printf("%d\n", check);
+				clear_screen();
+				if(check != 1){
+					disp_error("Vous ne pouvez pas bouger cette piece dans cette direction.");
+				}
+				disp_board(game);
+			}
+			move_piece (game, move);
+			clear_screen();
+			disp_board(game);
+			history[i] = move;
+			i++;
+		}
 
-		available_movments = movement_left(game);
-		agreement = plural(available_movments); // "s" if the number is >1
-		printf("%d mouvement%s restant%s\n", available_movments, agreement, agreement);
-
-		return; // The piece is picked. Good luck Suake to code the choice of the directions ;)
+		//return; // The piece is picked. Good luck Suake to code the choice of the directions ;)
 
 		*pcurrent_player = next_player(*pcurrent_player);
 		
