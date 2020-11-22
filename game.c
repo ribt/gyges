@@ -163,6 +163,8 @@ void gameplay(board game, int *pcurrent_player) {
 		*pcurrent_player = next_player(*pcurrent_player);
 		
 	}
+	
+	*pcurrent_player = next_player(*pcurrent_player);
 }
 
 int main() {
@@ -197,6 +199,10 @@ int main() {
 	printf("Fin du placement des pièces, début du jeu\n");
 
 	gameplay(game, &current_player);
+
+	clear_screen();
+	disp_board(game);
+	printf("Felicitation joueur %s pour cette victoire ! Ce fût une belle partie.\n", player_name(current_player));
 
 	destroy_game(game);
 
