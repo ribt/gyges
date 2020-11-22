@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include<string.h>
+#include <string.h>
 #include "board.h"
 #include "display.h"
 
@@ -76,12 +76,11 @@ void gameplay(board game, int *pcurrent_player) {
 	char input;
 	int check = -1;
 	char history[100];
-	int i;
 	direction dir_input;
 	
 	while (get_winner(game) == NO_PLAYER) {
-		i = 0;
-		history[0] = 0;
+		history[0] = '\0';
+
 		if (*pcurrent_player == SOUTH_P) {
 			line = southmost_occupied_line(game);
 		} else {
@@ -90,6 +89,8 @@ void gameplay(board game, int *pcurrent_player) {
 
 		res = -1;		
 		while (res != OK) {
+			disp_board(game);
+
 			printf("Joueur %s, choisissez la colonne où prendre la pièce : ", player_name(*pcurrent_player));
 			column = -1;
 			scanf("%d", &column);
@@ -105,27 +106,31 @@ void gameplay(board game, int *pcurrent_player) {
 				disp_error("Ce numéro est invalide.");
 			}
 
-			disp_board(game);		
 		}
+
+		clear_screen();
 
 		while (movement_left(game) > 0) {
 			check = -1;
-			input = 0;
 			available_movments = movement_left(game);
 			agreement = plural(available_movments); // "s" if the number is >1
-			while(check != 1){
-				while(input != 'N' && input != 'S' && input != 'E' && input != 'O' && input != 'G'){
-					printf("%d mouvement%s restant%s\n", available_movments, agreement, agreement);
-					printf("Que voulez vous faire ?\n> ");
+
+			while (check != 1) {
+				input = 0;
+				while (input != 'N' && input != 'S' && input != 'E' && input != 'O' && input != 'G') {
+					disp_board(game);
+					printf("Déplacez-vous en entrant des points cardinaux (N, S, E, O).\nSi vous êtes sur la dernière ligne, faites G pour gagner.\n");
+					printf("%d mouvement%s restant%s\n> ", available_movments, agreement, agreement);
 					printf("%s", history);
 					scanf("%c", &input);
 					clear_buffer();
 					clear_screen();
-					if(input != 'N' && input != 'S' && input != 'E' && input != 'O' && input != 'G'){
+					if (input != 'N' && input != 'S' && input != 'E' && input != 'O' && input != 'G') {
 						disp_error("Cette direction n'existe pas.");
 					}
-					disp_board(game);
+
 				}
+
 				switch (input) {
 					case 'N': dir_input = NORTH; break;
 					case 'S': dir_input = SOUTH; break;
@@ -133,20 +138,15 @@ void gameplay(board game, int *pcurrent_player) {
 					case 'O': dir_input = WEST; break;
 					case 'G': dir_input = GOAL; break;
 				};
-				check = is_move_possible(game, dir_input);
-				//printf("%d\n", check);
-				clear_screen();
+
+				check = is_move_possible(game, dir_input); // this function reurns 0 or 1 not return_code !!!
 				if (check != 1) {
-					disp_error("Vous ne pouvez pas bouger cette piece dans cette direction.");
+					disp_error("Vous ne pouvez pas bouger cette pièce dans cette direction.");
 				}
-				disp_board(game);
 			}
 			move_piece (game, dir_input);
-			clear_screen();
-			disp_board(game);
 			strcat(history, &input);
 			strcat(history, " ");
-			i++;
 		}
 
 
@@ -175,7 +175,7 @@ int main() {
 	place_piece(game, THREE, NORTH_P, 4);
 	place_piece(game, THREE, NORTH_P, 5);
 
-	current_player = NORTH_P;
+	current_player = SOUTH_P;
 
 	#else
 
@@ -185,7 +185,6 @@ int main() {
 
 	clear_screen();
 	printf("Fin du placement des pièces, début du jeu\n");
-	disp_board(game);
 
 	gameplay(game, &current_player);
 
