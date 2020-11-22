@@ -69,14 +69,14 @@ void init_game (board game, int *pcurrent_player) {
 }
 
 void gameplay(board game, int *pcurrent_player) {
-	int line, res;
+	int line;
 	int column = -1;
 	int available_movments;
 	char * agreement;
 	char input;
-	int check = -1;
-	char history[100];
 	direction dir_input;
+	int res;
+	char history[100];
 	
 	while (get_winner(game) == NO_PLAYER) {
 		history[0] = '\0';
@@ -111,11 +111,11 @@ void gameplay(board game, int *pcurrent_player) {
 		clear_screen();
 
 		while (movement_left(game) > 0) {
-			check = -1;
+			res = -1;
 			available_movments = movement_left(game);
 			agreement = plural(available_movments); // "s" if the number is >1
 
-			while (check != 1) {
+			while (res != 1) {
 				input = 0;
 				while (input != 'N' && input != 'S' && input != 'E' && input != 'O' && input != 'G') {
 					disp_board(game);
@@ -139,8 +139,8 @@ void gameplay(board game, int *pcurrent_player) {
 					case 'G': dir_input = GOAL; break;
 				};
 
-				check = is_move_possible(game, dir_input); // this function reurns 0 or 1 not return_code !!!
-				if (check != 1) {
+				res = is_move_possible(game, dir_input); // this function reurns 0 or 1 not return_code !!!
+				if (res != 1) {
 					disp_error("Vous ne pouvez pas bouger cette pièce dans cette direction.");
 				}
 			}
