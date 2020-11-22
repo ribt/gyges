@@ -75,9 +75,10 @@ void gameplay(board game, int *pcurrent_player) {
 	char move;
 	int check = -1;
 	int history[3];
-	int i = 0;
+	int i;
 	
 	while (get_winner(game) == NO_PLAYER) {
+		i = 0;
 		fill(history, 3, -1);
 		if (*pcurrent_player == SOUTH_P) {
 			line = southmost_occupied_line(game);
@@ -137,18 +138,19 @@ void gameplay(board game, int *pcurrent_player) {
 					case 71: move = GOAL; break;
 				};
 				check = is_move_possible(game, move);
-				printf("%d\n", check);
+				//printf("%d\n", check);
 				clear_screen();
 				if(check != 1){
 					disp_error("Vous ne pouvez pas bouger cette piece dans cette direction.");
 				}
 				disp_board(game);
 			}
-			move_piece (game, move);
-			clear_screen();
-			disp_board(game);
-			history[i] = move;
-			i++;
+		move_piece (game, move);
+		clear_screen();
+		disp_board(game);
+		history[i] = move;
+		//printf("%d\n", history[i]);
+		i++;
 		}
 
 		//return; // The piece is picked. Good luck Suake to code the choice of the directions ;)
