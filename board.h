@@ -30,8 +30,7 @@
  * \section rules Detailed rules of the game.
  * 
  * The game is played by two players on a six by six squares board, 
- * with two goals.
- * 
+ * with two goals. Detailed rules are included in the pdf subject, not recalled here (yet).
  */
 
 /**
@@ -108,6 +107,10 @@ typedef enum direction_e direction;
 /**
  * @brief return the next player
  * 
+ * This function simply return the player following current_player in the game turn.
+ * It does not use any information from the board game it is merely a turn among the players.
+ * It also serve as an example for the unit tests. 
+ *
  * @param player the player to change
  * @return the next player
  */
@@ -195,7 +198,7 @@ player get_winner(board game);
  * 
  * This can be used for deciding whether a south player move is legal
  * This is the smallest line number to carry a piece that can move for player South.
- * If there is no piece that can move on any line, return -1 (the board is empty)
+ * If there is no piece that can move on any line, return -1 (the board is empty).
  *
  * @param game the game to consider.
  * @return the line number.
@@ -308,7 +311,7 @@ int nb_pieces_available(board game, size piece, player player);
  * @param game the game to consider
  * @param piece the piece size requested
  * @param player the player whose piece to place
- * @param column the column where to place the piece
+ * @param column the column where to place the piece (from 0 to DIMENSION - 1)
  * @return a return code stating the result of the placement
  */
 return_code place_piece(board game, size piece, player player, int column);
@@ -338,8 +341,8 @@ return_code place_piece(board game, size piece, player player, int column);
  *
  * @param game the game where to pick a piece.
  * @param current_player the player who is supposed to be playing.
- * @param line the line number of where to pick the piece.
- * @param column the column number of where to pick the piece.
+ * @param line the line number of where to pick the piece (from 0 to DIMENSION - 1).
+ * @param column the column number of where to pick the piece (from 0 to DIMENSION - 1).
  * @return an integer encoding the result of the placement, 0 if things went smoothly.
  */
 return_code pick_piece(board game, player current_player, int line, int column);
@@ -390,7 +393,8 @@ return_code move_piece(board game, direction direction);
  * If the piece moving just finished its movement over another piece, 
  * this function allows the player to swap the two pieces, and place the piece below anywhere.
  * A successful swap finishes the movement of the player (no picked piece, no moves left, etc.)
- * The function returns 0 when the operation succeeds, otherwise, a positive integer:
+ * The function returns OK when the operation succeeds, 
+ * otherwise a return_code corresponding the the problem met:
  * - EMPTY if the swapping is not possible at the moment 
  *      (the current moving piece has not finished its movement over another piece)
  * - PARAM when the position proposed is off the board.
@@ -398,9 +402,39 @@ return_code move_piece(board game, direction direction);
  * @param game the game where to move a piece.
  * @param target_line the line number of where to move the swapped piece.
  * @param target_column the column number of where to move the swapped piece.
- * return an integer encoding the result of swap, 0 if things went smoothly.
+ * @return a return code encoding the result of swap, OK if things went smoothly.
  */
 return_code swap_piece(board game, int target_line, int target_column);
+
+/**
+ * @brief cancels the current movement of the player, putting the piece back where it started.
+ * 
+ * This is necessary since a player could start a movement with some piece which have no possible issue.
+ * Using this function, the moving piece is placed back where it started, and no piece is consiedered picked anymore.
+ * The function returns OK when the operation succeeds, 
+ * otherwise a return_code corresponding the the problem met:
+ * - EMPTY if there is no piece currently in movement.
+ * 
+ * @param game the game where to cancel the movement.
+ * @return a return code encoding the result of swap, OK if things went smoothly.
+ */
+return_code cancel_movement(board game);
+
+/**
+ * @brief cancels the last step of the current move.
+ *
+ * This function cancels only the last step of the current move. 
+ * If the last step was just picking the piece, this is equivalent to cancelling the movement.
+ * 
+ * The function returns OK when the operation succeeds, 
+ * otherwise a return_code corresponding the the problem met:
+ * - EMPTY if there is no piece currently in movement.
+ *
+ * @param game the game where to cancel the movement.
+ * @return a return code encoding the result of swap, OK if things went smoothly.
+ */
+return_code cancel_step(board game);
+
 
 /**@}*/
 
