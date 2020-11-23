@@ -8,9 +8,9 @@
 #define clear_screen() printf("\033[H\033[2J")
 #define clear_buffer() while(getchar()!='\n') {}
 
-void fill(int tab[], int size, int value) {
+void fill(int array[], int size, int value) {
 	for (int i = 0; i < size; i++) {
-		tab[i] = value;
+		array[i] = value;
 	}
 }
 
@@ -82,7 +82,7 @@ void gameplay(board game, int *pcurrent_player) {
 	char next_char;
 	
 	while (get_winner(game) == NO_PLAYER) {
-		history[0] = '\0';
+		history[0] = '\0'; // history = ""
 
 		if (*pcurrent_player == SOUTH_P) {
 			line = southmost_occupied_line(game);
@@ -95,7 +95,7 @@ void gameplay(board game, int *pcurrent_player) {
 			disp_board(game);
 
 			printf("Joueur %s, choisissez la colonne où prendre la pièce : ", player_name(*pcurrent_player));
-			column = -1;
+			column = -1; // because scanf doesn't edit the variable if we don't enter a number
 			scanf("%d", &column);
 			clear_buffer();
 			clear_screen();
@@ -108,19 +108,16 @@ void gameplay(board game, int *pcurrent_player) {
 			if (res == PARAM) {
 				disp_error("Ce numéro est invalide.");
 			}
-
 		}
 
-		clear_screen();
 		available_movments = movement_left(game);
-		while (available_movments != -1) {
-			res = -1;
-			
+		while (available_movments != -1) {	
 			agreement = plural(available_movments); // "s" if the number is >1
 
 			input_is_correct = 0;
 			while (!input_is_correct) {
 				disp_board(game);
+
 				if (available_movments == 0) {
 					printf("Vous êtes sur une pièce de taille %d. Vous avez le choix entre :\n", get_piece_size(game, picked_piece_line(game), picked_piece_column(game)));
 					printf("- rebondir : entrez de nouveaux points cardinaux pour vous déplacer\n");
@@ -131,8 +128,8 @@ void gameplay(board game, int *pcurrent_player) {
 					printf("Déplacez-vous en entrant des points cardinaux (N, S, E, O).\nSi vous êtes sur la dernière ligne, faites G pour gagner.\nFaites A pour annuler votre dernier coup.\n\n");
 					printf("%d mouvement%s restant%s\n> ", available_movments, agreement, agreement);
 				}
+
 				printf("%s", history);
-				input = 0;
 				scanf("%c", &input);
 				clear_buffer();
 				clear_screen();
@@ -261,7 +258,7 @@ int main() {
 	#endif
 
 	clear_screen();
-	printf("Fin du placement des pièces, début du jeu\n");
+	printf("Fin du placement des pièces, début du jeu !\n");
 
 	gameplay(game, &current_player);
 
