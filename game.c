@@ -147,12 +147,12 @@ void gameplay(board game, int *pcurrent_player) {
 					
 				}
 
-			}
+			} // input is now a correct char
 
 			if (input == 'A') {
 				cancel_step(game); // == OK because a piece is picked
 
-				history[strlen(history)-2] = '\0';
+				history[strlen(history)-2] = '\0'; // remove the last 2 characters
 
 			} else if (input == 'P') {
 				clear_screen();
@@ -217,7 +217,7 @@ void gameplay(board game, int *pcurrent_player) {
 			}
 
 			available_movments = movement_left(game);
-		}
+		} // no movments left anymore
 
 
 		if (input != 'A') {
