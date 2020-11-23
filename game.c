@@ -167,15 +167,31 @@ void gameplay(board game, int *pcurrent_player) {
 	*pcurrent_player = next_player(*pcurrent_player);
 }
 
+void random_victory_phrase(int *pcurrent_player){
+	int sentence_choice = rand()%10;
+	switch(sentence_choice) {
+		case 0 : printf("! Ce fût une belle partie.\n"); break;
+		case 1 : printf("! Mérité.\n"); break;
+		case 2 : printf(". J'aurai pas fait ça mais c'est passé, je suppose que c'est bien joué quand même.\n"); break;
+		case 3 : printf("\nGG ez.\n"); break;
+		case 4 : printf(". Maintenant on joue à un vrai jeu ? Horde ou Alliance ?\n"); break;
+		case 5 : printf("! Belle connaissance de la méta, solide sur les placements et mental en acier.\n"); break;
+		case 6 : printf(". Outplay tout simplement.\n"); break;
+		case 7 : printf(". Faut se reveiller joueur %s, c'est votre petit fère qui joue ?\n", player_name(next_player(*pcurrent_player))); break;
+		case 8 : printf("! Il y a eu du beau jeu des deux côté, c'était intéressant.\n"); break;
+		case 9 : printf(". Small question to the loser : Do you really speak French ? I have the feeling that you don't understand the rules.\n"); break;
+	};
+}
+
 int main() {
 	int current_player;
 	board game = new_game();
 
 	#ifdef DEBUG
 
-	place_piece(game, THREE, SOUTH_P, 0);
-	place_piece(game, ONE, SOUTH_P, 1);
-	place_piece(game, TWO, SOUTH_P, 2);
+	place_piece(game, TWO, SOUTH_P, 0);
+	place_piece(game, THREE, SOUTH_P, 1);
+	place_piece(game, ONE, SOUTH_P, 2);
 	place_piece(game, THREE, SOUTH_P, 3);
 	place_piece(game, ONE, SOUTH_P, 4);
 	place_piece(game, TWO, SOUTH_P, 5);
@@ -202,7 +218,8 @@ int main() {
 
 	clear_screen();
 	disp_board(game);
-	printf("Felicitation joueur %s pour cette victoire ! Ce fût une belle partie.\n", player_name(current_player));
+	printf("Felicitation joueur %s pour cette victoire", player_name(current_player));
+	random_victory_phrase(&current_player);
 
 	destroy_game(game);
 
