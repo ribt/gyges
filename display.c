@@ -5,8 +5,14 @@
 #define clear_screen() printf("\033[H\033[2J")
 
 void disp_board(board game) {
-    printf("               \033[0;90mNord\n       ╔═══╦═══╦═\033[1;93m⬤\033[0;90m═╦═══╦═══╗\n     ┌─╨─┬─╨─┬─╨─┬─╨─┬─╨─┬─╨─┐\n");
-        // \033[0;90m -> grey         \033[1;93m -> light yellow and bold  
+    printf("\n               \033[0;90mNord\n       ╔═══╦═══╦═"); // grey
+    if (get_winner(game) == SOUTH_P) {
+        printf("\033[1;93m⬤"); // light yellow and bold
+    } else {
+        printf("\033[0m◯");
+    }
+    printf("\033[0;90m═╦═══╦═══╗\n     ┌─╨─┬─╨─┬─╨─┬─╨─┬─╨─┬─╨─┐\n");
+        
     
     for (int line = DIMENSION-1; line >= 0; line--) {
         printf("     ");
@@ -24,7 +30,6 @@ void disp_board(board game) {
                     case THREE: printf("\033[1;31m3 "); break; // red and bold
                 }
             }
-
             
             if (column == DIMENSION-1) {
                 printf("\033[0;90m│");
@@ -35,8 +40,14 @@ void disp_board(board game) {
             printf("    \033[0;90m ├───┼───┼───┼───┼───┼───┤\n");
         }
     }
-    printf("     \033[0;90m└─╥─┴─╥─┴─╥─┴─╥─┴─╥─┴─╥─┘\n       ╚═══╩═══╩═\033[1;93m⬤\033[0;90m═╩═══╩═══╝\n                Sud\033[0m\n");
-                                                                                              // \033[0m -> regular text after this print
+
+    printf("     \033[0;90m└─╥─┴─╥─┴─╥─┴─╥─┴─╥─┴─╥─┘\n       ╚═══╩═══╩═");
+    if (get_winner(game) == NORTH_P) {
+        printf("\033[1;93m⬤"); // yellow and bold
+    } else {
+        printf("\033[0m◯");
+    }
+    printf("\033[0;90m═╩═══╩═══╝\n                Sud\033[0m\n\n"); // \033[0m -> regular text after this print
 }
 
 void disp_error(char * message) {
