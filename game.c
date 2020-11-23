@@ -151,12 +151,12 @@ void gameplay(board game, int *pcurrent_player) {
 
 			available_movments = movement_left(game);
 			if (available_movments == 0) { // because board.o is buggy
-					for (int i = 1; i <= 4; i++) {
-						if (is_move_possible(game, i)) {
-							available_movments = 42; // we don't know the number
-						}
+				for (int i = 1; i <= 4; i++) {
+					if (is_move_possible(game, i)) {
+						available_movments = 42; // we don't know the number
 					}
 				}
+			}
 		}
 
 
@@ -168,8 +168,7 @@ void gameplay(board game, int *pcurrent_player) {
 }
 
 void random_victory_phrase(int *pcurrent_player){
-	int sentence_choice = rand()%10;
-	switch(sentence_choice) {
+	switch(rand()%10) {
 		case 0 : printf("! Ce fût une belle partie.\n"); break;
 		case 1 : printf("! Mérité.\n"); break;
 		case 2 : printf(". J'aurai pas fait ça mais c'est passé, je suppose que c'est bien joué quand même.\n"); break;
