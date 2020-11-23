@@ -76,7 +76,10 @@ void gameplay(board game, int *pcurrent_player) {
 	char input;
 	direction dir_input;
 	int res;
+	int swapping_possible;
 	char history[100];
+	int input_is_correct;
+	char next_char;
 	
 	while (get_winner(game) == NO_PLAYER) {
 		history[0] = '\0';
@@ -110,27 +113,94 @@ void gameplay(board game, int *pcurrent_player) {
 
 		clear_screen();
 		available_movments = movement_left(game);
-		while (available_movments > 0) {
+		while (available_movments != -1) {
 			res = -1;
 			
 			agreement = plural(available_movments); // "s" if the number is >1
 
-			while (res != 1) {
-				input = 0;
-				while (input != 'N' && input != 'S' && input != 'E' && input != 'O' && input != 'G') {
-					disp_board(game);
-					printf("Déplacez-vous en entrant des points cardinaux (N, S, E, O).\nSi vous êtes sur la dernière ligne, faites G pour gagner.\n");
-					printf("%d mouvement%s restant%s\n> ", available_movments, agreement, agreement);
-					printf("%s", history);
-					scanf("%c", &input);
-					clear_buffer();
-					clear_screen();
-					if (input != 'N' && input != 'S' && input != 'E' && input != 'O' && input != 'G') {
-						disp_error("Cette direction n'existe pas.");
-					}
+			input_is_correct = 0;
+			while (!input_is_correct) {
+				disp_board(game);
+				if (available_movments == 0) {
+					printf("Vous êtes sur une pièce de taille %d. Vous avez le choix entre :\n", get_piece_size(game, picked_piece_line(game), picked_piece_column(game)));
+					printf("- rebondir : entrez de nouveaux points cardinaux pour vous déplacer\n");
+					printf("- prendre sa place et la placer ailleurs sur le plateau en faisant P\n> ");
+					swapping_possible = 1;
 
+				} else {
+					printf("Déplacez-vous en entrant des points cardinaux (N, S, E, O).\nSi vous êtes sur la dernière ligne, faites G pour gagner.\nFaites A pour annuler votre dernier coup.\n\n");
+					printf("%d mouvement%s restant%s\n> ", available_movments, agreement, agreement);
+				}
+				printf("%s", history);
+				input = 0;
+				scanf("%c", &input);
+				clear_buffer();
+				clear_screen();
+
+				if (input == 'P') {
+					if (swapping_possible == 0) {
+						disp_error("Cette direction n'existe pas.");
+					} else {
+						input_is_correct = 1;
+					}
+				} else if (input == 'N' || input == 'S' || input == 'E' || input == 'O' || input == 'G' || input == 'A') {
+					input_is_correct = 1;
+				} else {
+					disp_error("Cette direction n'existe pas.");
+					
 				}
 
+			}
+
+			if (input == 'A') {
+				cancel_step(game); // == OK because a piece is picked
+
+				history[strlen(history)-2] = '\0';
+
+			} else if (input == 'P') {
+				clear_screen();
+				res = -1;
+
+				while (res != OK) {
+					disp_board(game);
+					printf("À tout moment, vous pouvez entrer A pour à revenir l'écran précédent.\n\nLa pièces est de taille %d.\n", get_piece_size(game, picked_piece_line(game), picked_piece_column(game)));
+					line = -1;
+					printf("Entrez le n° de ligne où la mettre (1 étant la ligne Sud) : ");
+					scanf("%d", &line);
+					next_char = getchar();
+					if (next_char == 'A' && getchar() == '\n') {
+						res = OK;
+					} else if (next_char != '\n') {
+						clear_buffer();
+					}
+					line--;
+
+					printf("Entrez le n° de colonne où la mettre : ");
+					scanf("%d", &column);
+					next_char = getchar();
+					if (next_char == 'A' && getchar() == '\n') {
+						res = OK;
+					} else if (next_char != '\n') {
+						clear_buffer();
+					}
+					column--;
+
+					clear_screen();
+
+					if (res != OK) {
+						res = swap_piece(game, line, column); // != FORBIDDEN because we check he is able to do that					
+
+						if (res == PARAM) {
+							disp_error("Vous n'avez pas entré des numéros corrects.");
+						}
+						if (res == EMPTY) {
+							disp_error("Cette case n'est pas vide !");
+						}
+					}
+				}
+
+
+			} else {
 				switch (input) {
 					case 'N': dir_input = NORTH; break;
 					case 'S': dir_input = SOUTH; break;
@@ -139,28 +209,23 @@ void gameplay(board game, int *pcurrent_player) {
 					case 'G': dir_input = GOAL; break;
 				};
 
-				res = is_move_possible(game, dir_input); // this function reurns 0 or 1 not return_code !!!
-				if (res != 1) {
+				if (is_move_possible(game, dir_input) == 1) {
+					move_piece (game, dir_input);
+					strncat(history, &input, 1); // add 1 char to history
+					strcat(history, " ");
+				} else {
 					disp_error("Vous ne pouvez pas bouger cette pièce dans cette direction.");
+					
 				}
-				
 			}
-			move_piece (game, dir_input);
-			strncat(history, &input, 1);
-			strcat(history, " ");
 
 			available_movments = movement_left(game);
-			if (available_movments == 0) { // because board.o is buggy
-				for (int i = 1; i <= 4; i++) {
-					if (is_move_possible(game, i)) {
-						available_movments = 42; // we don't know the number
-					}
-				}
-			}
 		}
 
 
-		*pcurrent_player = next_player(*pcurrent_player);
+		if (input != 'A') {
+			*pcurrent_player = next_player(*pcurrent_player);
+		}
 		
 	}
 	
@@ -173,9 +238,9 @@ int main() {
 
 	#ifdef DEBUG
 
-	place_piece(game, TWO, SOUTH_P, 0);
+	place_piece(game, ONE, SOUTH_P, 0);
 	place_piece(game, THREE, SOUTH_P, 1);
-	place_piece(game, ONE, SOUTH_P, 2);
+	place_piece(game, TWO, SOUTH_P, 2);
 	place_piece(game, THREE, SOUTH_P, 3);
 	place_piece(game, ONE, SOUTH_P, 4);
 	place_piece(game, TWO, SOUTH_P, 5);
