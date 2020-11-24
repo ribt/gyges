@@ -20,7 +20,7 @@ void capitalize(char * pletter) {
 	}
 }
 
-void init_game(board game, int *pcurrent_player) {
+void init_game(board game, player * pcurrent_player) {
 	int history[DIMENSION];	// temporarily keep the player's choices
 	int column, piece_size, res;
 
@@ -74,7 +74,25 @@ void init_game(board game, int *pcurrent_player) {
 	}
 }
 
-void gameplay(board game, int *pcurrent_player) {
+void simplified_init_game(board game, player * pcurrent_player) {
+	place_piece(game, ONE, SOUTH_P, 0);
+	place_piece(game, THREE, SOUTH_P, 1);
+	place_piece(game, TWO, SOUTH_P, 2);
+	place_piece(game, THREE, SOUTH_P, 3);
+	place_piece(game, ONE, SOUTH_P, 4);
+	place_piece(game, TWO, SOUTH_P, 5);
+
+	place_piece(game, ONE, NORTH_P, 0);
+	place_piece(game, ONE, NORTH_P, 1);
+	place_piece(game, TWO, NORTH_P, 2);
+	place_piece(game, TWO, NORTH_P, 3);
+	place_piece(game, THREE, NORTH_P, 4);
+	place_piece(game, THREE, NORTH_P, 5);
+
+	*pcurrent_player = SOUTH_P;
+}
+
+void gameplay(board game, player * pcurrent_player) {
 	int line;
 	int column = -1;
 	int available_movments;
@@ -243,26 +261,12 @@ void gameplay(board game, int *pcurrent_player) {
 }
 
 int main() {
-	int current_player;
+	player current_player;
 	board game = new_game();
 
 	#ifdef DEBUG
 
-	place_piece(game, ONE, SOUTH_P, 0);
-	place_piece(game, THREE, SOUTH_P, 1);
-	place_piece(game, TWO, SOUTH_P, 2);
-	place_piece(game, THREE, SOUTH_P, 3);
-	place_piece(game, ONE, SOUTH_P, 4);
-	place_piece(game, TWO, SOUTH_P, 5);
-
-	place_piece(game, ONE, NORTH_P, 0);
-	place_piece(game, ONE, NORTH_P, 1);
-	place_piece(game, TWO, NORTH_P, 2);
-	place_piece(game, TWO, NORTH_P, 3);
-	place_piece(game, THREE, NORTH_P, 4);
-	place_piece(game, THREE, NORTH_P, 5);
-
-	current_player = SOUTH_P;
+	simplified_init_game(game, &current_player);	
 
 	#else
 
