@@ -14,6 +14,12 @@ void fill(int array[], int size, int value) {
 	}
 }
 
+void capitalize(char * pletter) {
+	if (*pletter >= 'a' && *pletter <= 'z') {
+		*pletter -= 0x20; // fortunately ASCII table is in a coherent order
+	}
+}
+
 void init_game(board game, int *pcurrent_player) {
 	int history[DIMENSION];	// temporarily keep the player's choices
 	int column, piece_size, res;
@@ -133,6 +139,7 @@ void gameplay(board game, int *pcurrent_player) {
 
 				printf("%s", history);
 				scanf("%c", &input);
+				capitalize(&input);
 				clear_buffer();
 				clear_screen();
 
