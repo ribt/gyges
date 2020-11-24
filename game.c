@@ -79,6 +79,7 @@ void gameplay(board game, int *pcurrent_player) {
 	int swapping_possible;
 	char history[100];
 	int input_is_correct;
+	int size_under_picked_piece;
 	char next_char;
 	
 	while (get_winner(game) == NO_PLAYER) {
@@ -94,7 +95,7 @@ void gameplay(board game, int *pcurrent_player) {
 		while (res != OK) {
 			disp_board(game);
 
-			printf("Joueur %s, choisissez la colonne où prendre la pièce : ", player_name(*pcurrent_player));
+			printf("Joueur %s, choisissez la colonne où prendre votre pièce (1-6) : ", player_name(*pcurrent_player));
 			column = -1; // because scanf doesn't edit the variable if we don't enter a number
 			scanf("%d", &column);
 			clear_buffer();
@@ -119,8 +120,9 @@ void gameplay(board game, int *pcurrent_player) {
 				disp_board(game);
 
 				if (available_movments == 0) {
-					printf("Vous êtes sur une pièce de taille %d. Vous avez le choix entre :\n", get_piece_size(game, picked_piece_line(game), picked_piece_column(game)));
-					printf("- rebondir : entrez de nouveaux points cardinaux pour vous déplacer\n");
+					size_under_picked_piece = get_piece_size(game, picked_piece_line(game), picked_piece_column(game));
+					printf("Vous êtes sur une pièce de taille %d. Vous avez le choix entre :\n", size_under_picked_piece);
+					printf("- rebondir de %d case%s : entrez de nouveaux points cardinaux pour vous déplacer\n", size_under_picked_piece, plural(size_under_picked_piece));
 					printf("- prendre sa place et la placer ailleurs sur le plateau en faisant P\n> ");
 					swapping_possible = 1;
 
@@ -160,9 +162,9 @@ void gameplay(board game, int *pcurrent_player) {
 
 				while (res != OK) {
 					disp_board(game);
-					printf("À tout moment, vous pouvez entrer A pour à revenir l'écran précédent.\n\nLa pièces est de taille %d.\n", get_piece_size(game, picked_piece_line(game), picked_piece_column(game)));
+					printf("À tout moment, vous pouvez entrer A pour revenir à l'écran précédent.\n\nChoisissez un nouvel emplacement pour la pièce de taille %d.\n", size_under_picked_piece);
 					line = -1;
-					printf("Entrez le n° de ligne où la mettre (1 étant la ligne Sud) : ");
+					printf("Entrez le n° de ligne, 1 étant la ligne Sud (1-6) : ");
 					scanf("%d", &line);
 					next_char = getchar();
 					if (next_char == 'A' && getchar() == '\n') {
@@ -172,7 +174,8 @@ void gameplay(board game, int *pcurrent_player) {
 					}
 					line--;
 
-					printf("Entrez le n° de colonne où la mettre : ");
+					printf("Entrez le n° de colonne (1-6) : ");
+					column = -1;
 					scanf("%d", &column);
 					next_char = getchar();
 					if (next_char == 'A' && getchar() == '\n') {
@@ -185,13 +188,16 @@ void gameplay(board game, int *pcurrent_player) {
 					clear_screen();
 
 					if (res != OK) {
-						res = swap_piece(game, line, column); // != FORBIDDEN because we check he is able to do that					
+						res = swap_piece(game, line, column);
 
 						if (res == PARAM) {
 							disp_error("Vous n'avez pas entré des numéros corrects.");
 						}
 						if (res == EMPTY) {
 							disp_error("Cette case n'est pas vide !");
+						}
+						if (res == FORBIDDEN) {
+							disp_error("Il est interdit de la positionner ici.");
 						}
 					}
 				}
