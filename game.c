@@ -261,6 +261,7 @@ void gameplay(board game, player * pcurrent_player) {
 
 int main() {
 	player current_player;
+	player winner;
 	board game = new_game();
 
 	#ifdef DEBUG
@@ -278,9 +279,11 @@ int main() {
 
 	gameplay(game, &current_player);
 
+	winner = get_winner(game);
+
 	clear_screen();
 	disp_board(game);
-	printf("Félicitation joueur %s pour cette victoire", player_name(current_player));
+	printf("Félicitation joueur %s pour cette victoire", player_name(winner));
 	
 	switch (rand()%10) {
 		case 0 : printf(" ! Ce fût une belle partie.\n"); break;
@@ -288,14 +291,12 @@ int main() {
 		case 2 : printf(". J'aurais pas fait ça mais c'est passé, je suppose que c'est bien joué quand même.\n"); break;
 		case 3 : printf("\nGG ez.\n"); break;
 		case 4 : printf(". Maintenant on joue à un vrai jeu ? Horde ou Alliance ?\n"); break;
-		case 5 : printf(" ! Belle connaissance de la méta, solide sur les placements et mental en acier.\n"); break;
+		case 5 : printf(" ! Belle connaissance de la méta, solide sur les placements et mental d'acier.\n"); break;
 		case 6 : printf(". Outplay tout simplement.\n"); break;
-		case 7 : printf(". Faut se réveiller joueur %s, c'est votre petit fère qui joue ?\n", player_name(next_player(current_player))); break;
+		case 7 : printf(". Faut se réveiller joueur %s, c'est votre petit fère qui joue ?\n", player_name(next_player(winner))); break;
 		case 8 : printf(" ! Il y a eu du beau jeu des deux côtés, c'était intéressant.\n"); break;
-		case 9 : printf(". Small question to the loser : Do you really speak French ? I have the feeling that you don't understand the rules.\n"); break;
+		case 9 : printf(". Small question to the loser : Do you really speak French? I have the feeling that you don't understand the rules...\n"); break;
 	};
-
-	destroy_game(game);
 
 	return 0;
 }
