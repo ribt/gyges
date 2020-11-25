@@ -22,7 +22,8 @@ void capitalize(char * pletter) {
 
 void init_game(board game, player * pcurrent_player) {
 	int history[DIMENSION];	// temporarily keep the player's choices
-	int column, piece_size, res;
+	int column, res;
+	size piece_size;
 
 	srand(time(NULL));
 
@@ -43,7 +44,7 @@ void init_game(board game, player * pcurrent_player) {
 		printf("> ");
 		while (column < DIMENSION) {  // place the pieces column by column
 			piece_size = -1;
-			scanf("%d", &piece_size);
+			scanf("%u", &piece_size);
 			clear_buffer();
 			clear_screen();
 
