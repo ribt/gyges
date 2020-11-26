@@ -5,20 +5,30 @@
 #include "board.h"
 #include "display.h"
 
+// This macro-function allows us to clear the terminal
 #define clear_screen() printf("\033[H\033[2J")
+
+// This one allows us to empty stdin buffer.
 #define clear_buffer() while(getchar()!='\n') {}
 
 
+// Switch lower case tu UPPER case
 void capitalize(char * pletter) {
 	if (*pletter >= 'a' && *pletter <= 'z') {
 		*pletter -= 0x20; // fortunately ASCII table is in a coherent order
 	}
 }
 
+/* This function is called one time at the begining of the game to:
+- Choose a random player to start.
+- Ask players to players to place their pieces.
+
+The players have to place all their pieces in the same round because we think it's faster and more ergonomic.
+*/
 void init_game(board game, player * pcurrent_player) {
 	size history[DIMENSION];	// temporarily keep the player's choices
 	int column;
-	size piece_size; // wrong type but it avoids warnig when printf %d
+	size piece_size;
 	return_code response;
 
 	srand(time(NULL));
@@ -29,19 +39,25 @@ void init_game(board game, player * pcurrent_player) {
 		*pcurrent_player = SOUTH_P;
 	}
 
-	for (int i = 0; i < NB_PLAYERS; i++) {	// do the same for all players
+	for (int i = 0; i < NB_PLAYERS; i++) {	// do the same for all players (i is never used)
 		for (int j = 0; j < DIMENSION; j++) { // fill history with NONE size
 			history[j] = NONE;
 		}
 
 		clear_screen();
-		disp_board(game);
-		printf("Joueur %s, veuillez choisir de gauche à droite la taille des pièces à mettre sur votre première ligne.\nValidez avec Entrée pour chaque pièce.\n", player_name(*pcurrent_player));
 
 		column = 0;
-		printf("> ");
 		while (column < DIMENSION) {  // place the pieces column by column
-			piece_size = -1;
+            disp_board(game);
+            printf("Joueur %s, veuillez choisir de gauche à droite la taille des pièces à mettre sur votre première ligne.\nValidez avec Entrée pour chaque pièce.\n> ", player_name(*pcurrent_player));
+
+            for (int j = 0; j < DIMENSION; j++) {  // display all the pieces already placed
+                if (history[j] != NONE) {
+                    printf("%d ", history[j]);
+                }
+            }
+
+			piece_size = -1;  // we need to do that because if the input is not a number, scanf will not edit the variable
 			scanf("%u", &piece_size);
 			clear_buffer();
 			clear_screen();
@@ -59,20 +75,16 @@ void init_game(board game, player * pcurrent_player) {
 				column++;
 			}
 
-			disp_board(game);
-			printf("Joueur %s, veuillez choisir de gauche à droite la taille des pièces à mettre sur votre première ligne.\nValidez avec Entrée pour chaque pièce.\n> ", player_name(*pcurrent_player));
-
-			for (int j = 0; j < DIMENSION; j++) {	// display all pieces already placed
-				if (history[j] != NONE) {
-					printf("%d ", history[j]);
-				}
-			}
-		}
+			
+		} // the first player finished placing every piece
 
 		*pcurrent_player = next_player(*pcurrent_player);
 	}
 }
 
+/* This function is called instead of init_game when we compile the program with the macro variable DEBUG (make debug).
+It enables to set a valid positioning of the pieces to start the main part of the code without having to place 12 pieces manually each time!
+*/
 void simplified_init_game(board game, player * pcurrent_player) {
 	place_piece(game, ONE, SOUTH_P, 0);
 	place_piece(game, THREE, SOUTH_P, 1);
@@ -91,6 +103,13 @@ void simplified_init_game(board game, player * pcurrent_player) {
 	*pcurrent_player = SOUTH_P;
 }
 
+/* This function is the real main one! It's a bit long but we need to do a lot of things every round:
+- Ask for a valid column where we can take a piece,
+- Ask for a valid movment (with the possibilty of cancel last steps at every time),
+- Enable to choose between "bouncing" or swapping when we arrive on another piece,
+- If we swap, ask for a valid position (with the possibility to go back on our choice)
+...
+*/
 void gameplay(board game, player * pcurrent_player) {
 	int line;
 	int column;
@@ -115,7 +134,7 @@ void gameplay(board game, player * pcurrent_player) {
 		}
 
 		response = -1;		
-		while (response != OK) {
+		while (response != OK) { // ask for a valid column to pick the piece
 			disp_board(game);
 
 			printf("Joueur %s, choisissez la colonne où prendre votre pièce (1-6) : ", player_name(*pcurrent_player));
