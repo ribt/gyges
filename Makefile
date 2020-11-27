@@ -1,11 +1,20 @@
-gyges: display.o board.o game.c
-	gcc -Wall display.o board.o game.c -o gyges
+gyges: board.o display.o game.o
+	gcc -Wall display.o board.o game.o -o gyges
 
-display.o: board.h display.c
+game.o: game.c board.h display.h
+	gcc -Wall -c game.c
+
+display.o: display.c board.h
 	gcc -Wall -c display.c
 
-debug: display.o board.o game.c
-	gcc -Wall -D DEBUG -g display.o board.o game.c -o gyges_debug
+debug: board.o display_debug.o game_debug.o
+	gcc -Wall -g board.o display_debug.o game_debug.o -o gyges_debug
+
+display_debug.o: display.c board.h
+	gcc -Wall -D DEBUG -g -c display.c -o display_debug.o
+
+game_debug.o: game.c board.h display.h
+	gcc -Wall -D DEBUG -g -c game.c -o game_debug.o
 
 clean:
-	rm display.o
+	rm -f game.o display.o game_debug.o display_debug.o gyges gyges_debug
