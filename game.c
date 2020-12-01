@@ -203,23 +203,26 @@ void treat_input(board game, char *history, char input) {
             printf("Entrez le n° de ligne, 1 étant la ligne Sud (1-6) : ");
             scanf("%d", &line);
             next_char = getchar();
-            if (next_char == 'A' && getchar() == '\n') {
+            if ((next_char == 'A' || next_char == 'a') && getchar() == '\n') {
                 response = OK;
             } else if (next_char != '\n') {
                 clear_buffer();
             }
             line--;
 
-            printf("Entrez le n° de colonne (1-6) : ");
-            column = -1;
-            scanf("%d", &column);
-            next_char = getchar();
-            if (next_char == 'A' && getchar() == '\n') {
-                response = OK;
-            } else if (next_char != '\n') {
-                clear_buffer();
+            if (response != OK) {
+
+                printf("Entrez le n° de colonne (1-6) : ");
+                column = -1;
+                scanf("%d", &column);
+                next_char = getchar();
+                if ((next_char == 'A' || next_char == 'a') && getchar() == '\n') {
+                    response = OK;
+                } else if (next_char != '\n') {
+                    clear_buffer();
+                }
+                column--;
             }
-            column--;
 
             clear_screen();
 
