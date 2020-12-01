@@ -2,8 +2,10 @@
 #include <unistd.h>
 #include "board.h"
 
-// this macro function allows us to clear the terminal
-#define clear_screen() printf("\033[H\033[2J")
+
+void clear_screen() {
+    printf("\033[H\033[2J");
+}
 
 
 void disp_board(board game) {

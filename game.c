@@ -5,11 +5,13 @@
 #include "board.h"
 #include "display.h"
 
-// This macro-function allows us to clear the terminal
-#define clear_screen() printf("\033[H\033[2J")
-
 // This one allows us to empty stdin buffer.
-#define clear_buffer() while(getchar()!='\n') {}
+void clear_buffer() {
+    char c = getchar();
+    while (c != EOF && c != '\n') {
+        c = getchar();
+    }
+}
 
 
 // Switch lower case tu UPPER case
@@ -211,7 +213,6 @@ void treat_input(board game, char *history, char input) {
             line--;
 
             if (response != OK) {
-
                 printf("Entrez le n° de colonne (1-6) : ");
                 column = -1;
                 scanf("%d", &column);
@@ -285,9 +286,25 @@ void gameplay(board game, player * pcurrent_player) {
 	*pcurrent_player = next_player(*pcurrent_player);
 }
 
+void victory_message(player winner) {
+    printf("Félicitation joueur %s pour cette victoire", player_name(winner));
+    
+    switch (rand()%10) {
+        case 0 : printf(" ! Ce fût une belle partie.\n"); break;
+        case 1 : printf(" ! C'est mérité.\n"); break;
+        case 2 : printf(". J'aurais pas fait ça mais c'est passé, je suppose que c'est bien joué quand même.\n"); break;
+        case 3 : printf("\nGG ez.\n"); break;
+        case 4 : printf(". Maintenant on joue à un vrai jeu ? Horde ou Alliance ?\n"); break;
+        case 5 : printf(" ! Belle connaissance de la méta, solide sur les placements et mental d'acier.\n"); break;
+        case 6 : printf(". Outplay tout simplement.\n"); break;
+        case 7 : printf(". Faut se réveiller joueur %s, c'est votre petit fère qui joue ?\n", player_name(next_player(winner))); break;
+        case 8 : printf(" ! Il y a eu du beau jeu des deux côtés, c'était intéressant.\n"); break;
+        case 9 : printf(". Small question to the loser : Do you really speak French? I have the feeling that you don't understand the rules...\n"); break;
+    };
+}
+
 int main() {
 	player current_player;
-	player winner;
 	board game = new_game();
 
 	#ifdef DEBUG
@@ -305,24 +322,10 @@ int main() {
 
 	gameplay(game, &current_player);
 
-	winner = get_winner(game);
-
 	clear_screen();
 	disp_board(game);
-	printf("Félicitation joueur %s pour cette victoire", player_name(winner));
-	
-	switch (rand()%10) {
-		case 0 : printf(" ! Ce fût une belle partie.\n"); break;
-		case 1 : printf(" ! C'est mérité.\n"); break;
-		case 2 : printf(". J'aurais pas fait ça mais c'est passé, je suppose que c'est bien joué quand même.\n"); break;
-		case 3 : printf("\nGG ez.\n"); break;
-		case 4 : printf(". Maintenant on joue à un vrai jeu ? Horde ou Alliance ?\n"); break;
-		case 5 : printf(" ! Belle connaissance de la méta, solide sur les placements et mental d'acier.\n"); break;
-		case 6 : printf(". Outplay tout simplement.\n"); break;
-		case 7 : printf(". Faut se réveiller joueur %s, c'est votre petit fère qui joue ?\n", player_name(next_player(winner))); break;
-		case 8 : printf(" ! Il y a eu du beau jeu des deux côtés, c'était intéressant.\n"); break;
-		case 9 : printf(". Small question to the loser : Do you really speak French? I have the feeling that you don't understand the rules...\n"); break;
-	};
 
+    victory_message(get_winner(game));
+	
 	return 0;
 }
