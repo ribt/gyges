@@ -15,7 +15,7 @@ void clear_buffer() {
 
 
 // Switch lower case tu UPPER case
-void capitalize(char * pletter) {
+void capitalize(char *pletter) {
 	if (*pletter >= 'a' && *pletter <= 'z') {
 		*pletter -= 0x20; // fortunately ASCII table is in a coherent order
 	}
@@ -27,13 +27,11 @@ void capitalize(char * pletter) {
 
 The players have to place all their pieces in the same round because we think it's faster and more ergonomic.
 */
-void init_game(board game, player * pcurrent_player) {
+void init_game(board game, player *pcurrent_player) {
 	size history[DIMENSION];	// temporarily keep the player's choices
 	int column;
 	size piece_size;
 	return_code response;
-
-	srand(time(NULL));
 
 	if (rand()%2 == 0) {  // random choice of the first player
 		*pcurrent_player = NORTH_P;
@@ -46,8 +44,6 @@ void init_game(board game, player * pcurrent_player) {
 			history[j] = NONE;
 		}
 
-		clear_screen();
-
 		column = 0;
 		while (column < DIMENSION) {  // place the pieces column by column
             disp_board(game);
@@ -59,7 +55,7 @@ void init_game(board game, player * pcurrent_player) {
                 }
             }
 
-			piece_size = -1;  // we need to do that because if the input is not a number, scanf will not edit the variable
+			piece_size = -1;  // we need to do that because if the input is not a number, scanf will not modify the variable
 			scanf("%u", &piece_size);
 			clear_buffer();
 			clear_screen();
@@ -76,9 +72,7 @@ void init_game(board game, player * pcurrent_player) {
 				history[column] = piece_size;			
 				column++;
 			}
-
-			
-		} // the first player finished placing every piece
+		}
 
 		*pcurrent_player = next_player(*pcurrent_player);
 	}
@@ -87,7 +81,7 @@ void init_game(board game, player * pcurrent_player) {
 /* This function is called instead of init_game when we compile the program with the macro variable DEBUG (make debug).
 It enables to set a valid positioning of the pieces to start the main part of the code without having to place 12 pieces manually each time!
 */
-void simplified_init_game(board game, player * pcurrent_player) {
+void init_game_debug(board game, player *pcurrent_player) {
 	place_piece(game, ONE, SOUTH_P, 0);
 	place_piece(game, THREE, SOUTH_P, 1);
 	place_piece(game, TWO, SOUTH_P, 2);
@@ -105,10 +99,10 @@ void simplified_init_game(board game, player * pcurrent_player) {
 	*pcurrent_player = SOUTH_P;
 }
 
-
+// ask for a valid column and pick the piece
 void choose_piece_to_pick(board game, player *pcurrent_player) {
     int line, column;
-    int response = -1;
+    return_code response = PARAM;
 
     if (*pcurrent_player == SOUTH_P) {
         line = southmost_occupied_line(game);
@@ -120,7 +114,7 @@ void choose_piece_to_pick(board game, player *pcurrent_player) {
         disp_board(game);
 
         printf("Joueur %s, choisissez la colonne où prendre votre pièce (1-6) : ", player_name(*pcurrent_player));
-        column = -1; // because scanf doesn't edit the variable if we don't enter a number
+        column = -1; // because scanf doesn't modify the variable if we don't enter a number
         scanf("%d", &column);
         clear_buffer();
         clear_screen();
@@ -136,8 +130,8 @@ void choose_piece_to_pick(board game, player *pcurrent_player) {
     }
 }
 
-
-char ask_for_valid_input(board game, player *pcurrent_player, char *history) {
+// this function doesn't verify if the moove is possible
+char ask_for_valid_input(board game, char *history) {
     char input;
     int input_is_correct = 0;
     int nbr_available_movments = movement_left(game);
@@ -151,10 +145,10 @@ char ask_for_valid_input(board game, player *pcurrent_player, char *history) {
             size_under_picked_piece = get_piece_size(game, picked_piece_line(game), picked_piece_column(game));
             printf("Vous êtes sur une pièce de taille %d. Vous avez le choix entre :\n", size_under_picked_piece);
             printf("- rebondir de %d case%s : entrez de nouveaux points cardinaux pour vous déplacer\n", size_under_picked_piece, plural(size_under_picked_piece));
-            printf("- prendre sa place et la placer ailleurs sur le plateau en faisant P\n> ");
+            printf("- prendre sa place et la placer ailleurs sur le plateau : faites P\n> ");
 
         } else {
-            printf("Déplacez-vous en entrant des points cardinaux (N, S, E, O).\nSi vous êtes sur la dernière ligne, faites G pour gagner.\nFaites A pour annuler votre dernier coup.\n\n");
+            printf("Déplacez-vous en entrant des points cardinaux (N, S, E, O).\nSi vous êtes sur la dernière ligne, faites G pour gagner.\nFaites A pour annuler votre dernier coup.\n(Les minuscules sont acceptées.)\n\n");
             printf("%d mouvement%s restant%s\n> ", nbr_available_movments, agreement, agreement);
         }
 
@@ -165,24 +159,22 @@ char ask_for_valid_input(board game, player *pcurrent_player, char *history) {
         clear_screen();
 
         if (input == 'P') {
-            if (nbr_available_movments != 0) {
-                disp_error("Cette direction n'existe pas.");
+            if (nbr_available_movments == 0) {
+                input_is_correct = 1;                
             } else {
-                input_is_correct = 1;
+                disp_error("Cette direction n'existe pas.");                
             }
         } else if (input == 'N' || input == 'S' || input == 'E' || input == 'O' || input == 'G' || input == 'A') {
             input_is_correct = 1;
         } else {
-            disp_error("Cette direction n'existe pas.");
-            
+            disp_error("Cette direction n'existe pas.");   
         }
-
     }
 
     return input;
 }
 
-
+// swap a piece correctly
 void ask_for_swapping(board game) {
     int column, line;
     return_code response = PARAM;
@@ -253,18 +245,18 @@ void treat_input(board game, char *history, char input) {
             case 'G': dir_input = GOAL; break;
         };
 
-        if (is_move_possible(game, dir_input) == 1) {
-            move_piece (game, dir_input);
+        if (is_move_possible(game, dir_input)) {
+            move_piece(game, dir_input);
             strncat(history, &input, 1); // add 1 char to history
             strcat(history, " ");
         } else {
-            disp_error("Vous ne pouvez pas bouger cette pièce dans cette direction.");
-            
+            disp_error("Vous ne pouvez pas bouger cette pièce dans cette direction."); 
         }
     }
 }
 
-void gameplay(board game, player * pcurrent_player) {
+// game loop
+void gameplay(board game, player *pcurrent_player) {
 	char input;
 	char history[100];  // a string to be printed
 	
@@ -274,17 +266,14 @@ void gameplay(board game, player * pcurrent_player) {
         choose_piece_to_pick(game, pcurrent_player);
 
 		while (movement_left(game) != -1) {
-			input = ask_for_valid_input(game, pcurrent_player, history);
+			input = ask_for_valid_input(game, history);
 			treat_input(game, history, input);
 		}
 
 		if (input != 'A') {
 			*pcurrent_player = next_player(*pcurrent_player);
 		}
-		
 	}
-	
-	*pcurrent_player = next_player(*pcurrent_player);
 }
 
 void victory_message(player winner) {
@@ -308,17 +297,15 @@ int main() {
 	player current_player;
 	board game = new_game();
 
+    srand(time(NULL));
+    clear_screen();
+
 	#ifdef DEBUG
-
-	simplified_init_game(game, &current_player);	
-
+	   init_game_debug(game, &current_player);	
 	#else
-
-	init_game(game, &current_player);
-
+	   init_game(game, &current_player);
 	#endif
 
-	clear_screen();
 	printf("Fin du placement des pièces, début du jeu !\n");
 
 	gameplay(game, &current_player);
