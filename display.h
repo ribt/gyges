@@ -19,3 +19,10 @@ char * player_name(player this_player);
 
 // This function returns pointer to a string containing "s" if the number is greater than 1 or an empty string.
 char * plural(int number);
+
+
+/*
+this function allows us to clear the terminal
+we call it very often so for better performances we used a macro function but our teacher didn't like it :c
+*/
+void clear_screen();
