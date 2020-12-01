@@ -183,67 +183,68 @@ char ask_for_valid_input(board game, player *pcurrent_player, char *history) {
 }
 
 
-void treat_input(board game, char *history, char input) {
-    return_code response;
-    int line, column;
-    direction dir_input;
+void ask_for_swapping(board game) {
+    int column, line;
+    return_code response = PARAM;
     char next_char;
 
-    if (input == 'A') {
-        cancel_step(game); // == OK because a piece is picked
+    while (response != OK) {
+        disp_board(game);
+        printf("À tout moment, vous pouvez entrer A pour revenir à l'écran précédent.\n\nChoisissez un nouvel emplacement pour la pièce de taille %d.\n", get_piece_size(game, picked_piece_line(game), picked_piece_column(game)));
+        line = -1;
+        printf("Entrez le n° de ligne, 1 étant la ligne Sud (1-6) : ");
+        scanf("%d", &line);
+        next_char = getchar();
+        if ((next_char == 'A' || next_char == 'a') && getchar() == '\n') {
+            response = OK;
+        } else if (next_char != '\n') {
+            clear_buffer();
+        }
+        line--;
 
-        history[strlen(history)-2] = '\0'; // remove the last 2 characters
-
-    } else if (input == 'P') {
-        clear_screen();
-        response = PARAM; // to start the while loop
-
-        while (response != OK) {
-            disp_board(game);
-            printf("À tout moment, vous pouvez entrer A pour revenir à l'écran précédent.\n\nChoisissez un nouvel emplacement pour la pièce de taille %d.\n", get_piece_size(game, picked_piece_line(game), picked_piece_column(game)));
-            line = -1;
-            printf("Entrez le n° de ligne, 1 étant la ligne Sud (1-6) : ");
-            scanf("%d", &line);
+        if (response != OK) {
+            printf("Entrez le n° de colonne (1-6) : ");
+            column = -1;
+            scanf("%d", &column);
             next_char = getchar();
             if ((next_char == 'A' || next_char == 'a') && getchar() == '\n') {
                 response = OK;
             } else if (next_char != '\n') {
                 clear_buffer();
             }
-            line--;
-
-            if (response != OK) {
-                printf("Entrez le n° de colonne (1-6) : ");
-                column = -1;
-                scanf("%d", &column);
-                next_char = getchar();
-                if ((next_char == 'A' || next_char == 'a') && getchar() == '\n') {
-                    response = OK;
-                } else if (next_char != '\n') {
-                    clear_buffer();
-                }
-                column--;
-            }
-
-            clear_screen();
-
-            if (response != OK) {
-                response = swap_piece(game, line, column);
-
-                if (response == PARAM) {
-                    disp_error("Vous n'avez pas entré des numéros corrects.");
-                }
-                if (response == EMPTY) {
-                    disp_error("Cette case n'est pas vide !");
-                }
-                if (response == FORBIDDEN) {
-                    disp_error("Il est interdit de la positionner ici.");
-                }
-            }
+            column--;
         }
 
+        clear_screen();
 
-    } else {
+        if (response != OK) {
+            response = swap_piece(game, line, column);
+
+            if (response == PARAM) {
+                disp_error("Vous n'avez pas entré des numéros corrects.");
+            }
+            if (response == EMPTY) {
+                disp_error("Cette case n'est pas vide !");
+            }
+            if (response == FORBIDDEN) {
+                disp_error("Il est interdit de la positionner ici.");
+            }
+        }
+    }
+}
+
+void treat_input(board game, char *history, char input) {
+    direction dir_input;
+
+    if (input == 'A') {
+        cancel_step(game); // == OK because a piece is picked
+        history[strlen(history)-2] = '\0'; // remove the last 2 characters
+    }
+    else if (input == 'P') {
+        clear_screen();
+        ask_for_swapping(game); 
+    }
+    else {
         switch (input) {
             case 'N': dir_input = NORTH; break;
             case 'S': dir_input = SOUTH; break;
