@@ -1,9 +1,11 @@
 #include <stdio.h>
-#include <unistd.h>
 #include "board.h"
 
-// this macro function allows us to clear the terminal
-#define clear_screen() printf("\033[H\033[2J")
+// the comments describing the functions are in display.h
+
+void clear_screen() {
+    printf("\033[H\033[2J");
+}
 
 
 void disp_board(board game) {
@@ -40,7 +42,7 @@ void disp_board(board game) {
     for (int line = DIMENSION-1; line >= 0; line--) { // line n°0 is the South
         printf("        ");
         for (int column = 0; column < DIMENSION; column++) {
-            printf("\033[0;90m│ ");            
+            printf("\033[0;90m│ "); // space at the begining of a cell   
 
             switch (get_piece_size(game, line, column)) {
                 case NONE: printf(" "); break;
@@ -49,7 +51,7 @@ void disp_board(board game) {
                 case THREE: printf("\033[1;31m3"); break; // red and bold
             }
 
-            if (line == picked_piece_line(game) && column == picked_piece_column(game)) {
+            if (line == picked_piece_line(game) && column == picked_piece_column(game)) { // print the picked piece
                 switch (picked_piece_size(game)) {
                     case NONE: break; // never happens but it avoids a warning
                     case ONE: printf("\033[5;1;34m1"); break;   // blue and bold and blink
