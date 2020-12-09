@@ -1,6 +1,0 @@
-clear
-echo "***** Teacher's version:"
-gcc -Wall -g test.c original_board.o -o test_teacher && ./test_teacher
-
-echo -e "\n\n***** Your version:"
-gcc -Wall -g test.c my_board.c -o test_yours && ./test_yours
