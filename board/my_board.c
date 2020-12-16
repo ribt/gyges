@@ -190,43 +190,53 @@ return_code pick_piece(board game, player current_player, int line, int column) 
     return OK;
 }
 
-bool is_move_possible(board game, direction direction) {
-    int line = game->picked_piece_line;
-    int column = game->picked_piece_column;
+bool is_goal_reachable(board game) {
+    if (game->current_player == NORTH_P && game->picked_piece_line == 0) {
+        return true;
+    }
 
-    switch (direction) {
-        case NORTH: if (movement_left(game) != 1){
-            if ((game->picked_piece_line) == DIMENSION - 1){
-                    return false;
-                } else if ((game->map[line + 1][column]) != NONE){
-                    return false;
-                }
-            } break;
-        case SOUTH: if (movement_left(game) != 1){
-                if ((game->picked_piece_line) == 0){
-                    return false;
-                } else if ((game->map[line - 1][column]) != NONE){
-                    return false;
-                }
-            } break;
-        case EAST: if ((game->picked_piece_column) == DIMENSION-1){
-                return false;
-            } else if ((game->map[line][column + 1]) != NONE && movement_left(game) != 1){
-                return false;
-            } break;
-        case WEST: if ((game->picked_piece_column) == 0){
-                return false;
-            } else if ((game->map[line][column - 1]) != NONE && movement_left(game) != 1){
-                return false;
-            } break;
-        case GOAL: if(movement_left(game) != 1){
-                return false;
-            }
-            if (game->current_player == SOUTH_P && line != southmost_occupied_line(game)){
-               return false;
-            } else if (game->current_player == NORTH_P && line != northmost_occupied_line(game)){
-                return false;
-            }
+    if (game->current_player == SOUTH_P && game->picked_piece_line == DIMENSION-1) {
+        return true;
+    }
+
+    return false;
+}
+
+bool is_move_possible(board game, direction testing_direction) {
+    int next_line = game->picked_piece_line;
+    int next_column = game->picked_piece_column;
+
+    if (game->picked_piece_size == NONE || game->movement_left < 1) {
+        return false;
+    }
+
+    switch (testing_direction) {
+        case NORTH: 
+            next_line++;
+            break;
+        case SOUTH: 
+            next_line--;
+            break;
+        case EAST: 
+            next_column++;
+            break;
+        case WEST: 
+            next_column--;
+            break;
+
+        case GOAL:
+            return is_goal_reachable(game);
+    }
+
+    if (next_line < 0 || next_line >= DIMENSION || next_column < 0 || next_column >= DIMENSION) {
+        return false;
+    }
+    if (game->map[next_line][next_column] != NONE) {
+        if (game->movement_left == 1) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     return true;

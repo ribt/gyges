@@ -75,12 +75,44 @@ int main() {
 
     affichage(game); // 46-51
 
-    printf("%d\n", movement_left(game)); // 52
+    printf("%d\n", movement_left(game)); // 52 variables
     printf("%d\n", picked_piece_size(game));
     printf("%d\n", picked_piece_owner(game));
     printf("%d\n", picked_piece_line(game));
     printf("%d\n", picked_piece_column(game));
     printf("%d\n", movement_left(game));
+
+    /*
+    1 1 2 2 3 3 
+    0 0 0 0 0 0 
+    0 0 0 0 0 0 
+    0 0 0 0 0 0 
+    0 0 0 0 0 0 
+   (1) 3 2 3 1 2
+    */
+
+    printf("%d\n", is_move_possible(game, NORTH)); // 58
+    printf("%d\n", is_move_possible(game, SOUTH));
+    printf("%d\n", is_move_possible(game, EAST));
+    printf("%d\n", is_move_possible(game, WEST));
+
+    printf("%d\n", pick_piece(game, SOUTH_P, 0, 1)); // 62
+    printf("%d\n", is_move_possible(game, NORTH));
+    printf("%d\n", is_move_possible(game, SOUTH));
+    printf("%d\n", is_move_possible(game, EAST));
+    printf("%d\n", is_move_possible(game, WEST));
+
+    printf("%d\n", pick_piece(game, NORTH_P, 5, 0)); // 67
+    printf("%d\n", is_move_possible(game, NORTH));
+    printf("%d\n", is_move_possible(game, SOUTH));
+    printf("%d\n", is_move_possible(game, EAST));
+    printf("%d\n", is_move_possible(game, WEST));
+
+    printf("%d\n", pick_piece(game, SOUTH_P, 5, 1)); // 72
+    printf("%d\n", is_move_possible(game, NORTH));
+    printf("%d\n", is_move_possible(game, SOUTH));
+    printf("%d\n", is_move_possible(game, EAST));
+    printf("%d\n", is_move_possible(game, WEST));
 
 
     return 0;
