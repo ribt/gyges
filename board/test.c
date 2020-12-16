@@ -42,9 +42,39 @@ int main() {
 
     printf("%d\n", place_piece(game, THREE, NORTH_P, 5)); // 23 normal
 
-    affichage(game); // 24 display board (6 lines)
+    affichage(game); // 24-29 display board
+
+    /*
+    1 1 2 2 3 3 
+    0 0 0 0 0 0 
+    0 0 0 0 0 0 
+    0 0 0 0 0 0 
+    0 0 0 0 0 0 
+    1 3 2 3 1 2
+    */
 
     printf("%d\n", movement_left(game)); // 30 initial movement_left
+
+    printf("%d\n", pick_piece(game, SOUTH_P, 1, 0)); // 31 test pick_piece
+    printf("%d\n", pick_piece(game, SOUTH_P, 0, -1)); // wrong (line, column)
+    printf("%d\n", pick_piece(game, SOUTH_P, -1, 0));
+    printf("%d\n", pick_piece(game, SOUTH_P, 42, 0));
+    printf("%d\n", pick_piece(game, SOUTH_P, 0, 42));
+
+    printf("%d\n", pick_piece(game, NORTH_P, 0, 0)); // 36 wrong player
+    printf("%d\n", pick_piece(game, 0, 0, 0));
+    printf("%d\n", pick_piece(game, 3, 0, 0));
+    printf("%d\n", pick_piece(game, -1, 0, 0));
+    printf("%d\n", pick_piece(game, 42, 0, 0));
+
+    printf("%d\n", pick_piece(game, SOUTH_P, 0, 0)); // 41 normal
+
+    affichage(game); // 42-47
+
+
+
+
+
 
     return 0;
 }
