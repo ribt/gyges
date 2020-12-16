@@ -13,8 +13,8 @@ struct board_s {
     player winner;
 };
 
+
 board new_game(){
-    printf("You're using my own board.c !\n");
     board new_board = malloc(sizeof(struct board_s));
 
     for (int line = 0; line < DIMENSION; line++) {
@@ -27,12 +27,13 @@ board new_game(){
     new_board->current_player = NO_PLAYER;
     new_board->picked_piece_size = -1;
     new_board->picked_piece_size = -1;
+    new_board->movement_left = -1;
     new_board->winner = NO_PLAYER;
 
     return new_board;
 }
 
-void destroy_game(board game){
+void destroy_game(board game) {
     free(game);
 }
 
@@ -124,7 +125,7 @@ return_code place_piece(board game, size piece, player player, int column) {
         return PARAM;
     }
 
-    if (column < 0 || column > DIMENSION) {
+    if (column < 0 || column >= DIMENSION) {
         return PARAM;
     }
 
