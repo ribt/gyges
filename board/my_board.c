@@ -38,6 +38,9 @@ void destroy_game(board game) {
 }
 
 size get_piece_size(board game, int line, int column) {
+    if (line < 0 || line >= DIMENSION || column < 0 || column >= DIMENSION) {
+        return NONE;
+    }
     return game->map[line][column];
 }
 
