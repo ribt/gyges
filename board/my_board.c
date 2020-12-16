@@ -90,8 +90,6 @@ int movement_left(board game) {
     return game->movement_left;
 }
 
-
-
 int nb_pieces_available(board game, size piece, player player) {
     int line, count;
 
@@ -242,13 +240,39 @@ bool is_move_possible(board game, direction testing_direction) {
     return true;
 }
 
-// TODO:
-
-
+void terminate_move(game) {
+    game->map[picked_piece_line(game)][picked_piece_column(game)] = picked_piece_size(game);
+    game->movement_left = -1;
+    game->current_player = NONE;
+    game->picked_piece_line = -1;
+    game->picked_piece_column = -1;
+}
 
 return_code move_piece(board game, direction direction);
 
-return_code swap_piece(board game, int target_line, int target_column);
+return_code swap_piece(board game, int target_line, int target_column) {
+    if (game->movement_left != 0) {
+        return EMPTY;
+    }
+    if (target_line < 0 || target_line >= DIMENSION || target_column < 0 || target_column >= DIMENSION) {
+        return PARAM;
+    }
+    if (game->map[target_line][target_column] != NONE
+            || (target_line == game->picked_piece_line && target_column == game->picked_piece_column)
+            || game->current_player == NONE) {
+        return FORBIDDEN;
+    }
+
+    game->map[target_line][target_column] = get_piece_size(game, picked_piece_line(game), picked_piece_column(game));
+    
+    terminate_move(game);
+
+    return OK;
+}
+
+
+
+// TODO:
 
 return_code cancel_movement(board game);
 
