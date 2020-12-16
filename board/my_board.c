@@ -25,8 +25,8 @@ board new_game(){
 
     new_board->picked_piece_size = NONE;
     new_board->current_player = NO_PLAYER;
-    new_board->picked_piece_size = -1;
-    new_board->picked_piece_size = -1;
+    new_board->picked_piece_line = -1;
+    new_board->picked_piece_column = -1;
     new_board->movement_left = -1;
     new_board->winner = NO_PLAYER;
 
@@ -159,11 +159,11 @@ return_code place_piece(board game, size piece, player player, int column) {
 return_code pick_piece(board game, player current_player, int line, int column) {
     int right_line;
 
-    if (current_player == NORTH_P){
+    if (current_player == NORTH_P) {
         right_line = northmost_occupied_line(game);
-    } else if (current_player == SOUTH_P){
+    } else if (current_player == SOUTH_P) {
         right_line = southmost_occupied_line(game);
-    } else{
+    } else {
         return PARAM;
     }
 
@@ -171,16 +171,22 @@ return_code pick_piece(board game, player current_player, int line, int column) 
         return PARAM;
     }
 
-    if (line != right_line || get_winner(game) != NO_PLAYER) {
-        return FORBIDDEN;
-    }
-
     if (game->map[line][column] == NONE) {
         return EMPTY;
     }
 
+    if (line != right_line || get_winner(game) != NO_PLAYER) {
+        return FORBIDDEN;
+    }
+
     game->picked_piece_line = line;
     game->picked_piece_column = column;
+    game->picked_piece_size = game->map[line][column];
+
+    game->map[line][column] = 0;
+    game->current_player = current_player;
+    game->movement_left = game->picked_piece_size;
+
     return OK;
 }
 
