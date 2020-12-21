@@ -262,7 +262,7 @@ void terminate_move(board game) {
     game->current_player = NONE;
     game->picked_piece_line = -1;
     game->picked_piece_column = -1;
-    gaem->history_len = 0;
+    game->history_len = 0;
 }
 
 return_code move_piece(board game, direction direction) {
@@ -367,11 +367,17 @@ return_code cancel_movement(board game) {
     game->picked_piece_line = game->positions_history[0][0];
     game->picked_piece_column = game->positions_history[0][1];
     terminate_move(game);
+
+    return OK;
 }
 
 return_code cancel_step(board game) {
     if (game->picked_piece_size == NONE) {
         return EMPTY;
+    }
+
+    if (game->history_len == 1) {
+        return cancel_movement(game);
     }
 
     game->history_len--;
@@ -382,4 +388,5 @@ return_code cancel_step(board game) {
         game->movement_left = 0;
     }
 
+    return OK;
 }

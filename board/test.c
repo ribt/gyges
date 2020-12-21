@@ -143,6 +143,47 @@ int main() {
 
     affichage(game); // 94 - 99
 
+    /*
+    0 0 2 2 3 3 
+    0 0 0 0 0 0 
+    0 0 1 0 0 0 
+    0 0 0 0 0 0 
+    0 0 0 0 0 0 
+    0 0 2 3 1 2
+    */
+
+    printf("%d\n", pick_piece(game, NORTH_P, 5, 5)); // 100 normal path
+    printf("%d\n", move_piece(game, SOUTH));
+    printf("%d\n", move_piece(game, WEST));
+    printf("%d\n", move_piece(game, NORTH));
+    printf("%d\n", move_piece(game, SOUTH));
+    printf("%d\n", move_piece(game, SOUTH));
+    
+    /*
+    0 0 2 2 3 0 
+    0 0 0 0 0 0 
+    0 0 1 0(3)0 
+    0 0 0 0 0 0 
+    0 0 0 0 0 0 
+    0 0 2 3 1 2
+    */
+
+    printf("%d\n", movement_left(game)); // 106
+    printf("%d\n", cancel_step(game));
+    printf("%d\n", movement_left(game));
+    printf("%d\n", cancel_step(game));
+    printf("%d\n", movement_left(game));
+    printf("%d\n", cancel_step(game));
+    printf("%d\n", movement_left(game));
+    printf("%d\n", cancel_step(game));
+    printf("%d\n", movement_left(game));
+    printf("%d\n", cancel_step(game));
+    printf("%d\n", movement_left(game));
+    printf("%d\n", cancel_step(game));
+    printf("%d\n", movement_left(game));
+    printf("%d\n", cancel_step(game));
+
+
 
 
 
