@@ -259,7 +259,7 @@ return_code move_piece(board game, direction direction) {
         return EMPTY;
     }
 
-    if (movement_left(game) < 1) {
+    if (movement_left(game) < 0) {
         return PARAM;
     }
 
@@ -267,7 +267,7 @@ return_code move_piece(board game, direction direction) {
         return PARAM;
     }
 
-    if (is_goal_reachable(game) == false) {
+    if (direction == GOAL && is_goal_reachable(game) == false) {
         return FORBIDDEN;
     }
 
