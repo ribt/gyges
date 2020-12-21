@@ -169,19 +169,36 @@ int main() {
     */
 
     printf("%d\n", movement_left(game)); // 106
+    affichage(game);
+
     printf("%d\n", cancel_step(game));
     printf("%d\n", movement_left(game));
+    affichage(game);
+
     printf("%d\n", cancel_step(game));
     printf("%d\n", movement_left(game));
+    affichage(game);
+
     printf("%d\n", cancel_step(game));
     printf("%d\n", movement_left(game));
+    affichage(game);
+
     printf("%d\n", cancel_step(game));
     printf("%d\n", movement_left(game));
+    affichage(game);
+
     printf("%d\n", cancel_step(game));
     printf("%d\n", movement_left(game));
+    affichage(game);
+
     printf("%d\n", cancel_step(game));
     printf("%d\n", movement_left(game));
+    affichage(game);
+    
     printf("%d\n", cancel_step(game));
+    printf("%d\n", movement_left(game));
+    affichage(game);
+
 
 
 
