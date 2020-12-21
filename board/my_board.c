@@ -255,11 +255,15 @@ return_code move_piece(board game, direction direction) {
     int next_line = game->picked_piece_line;
     int next_column = game->picked_piece_column;
 
+    if (game->movement_left == 0){
+        game->movement_left = get_piece_size(game, game->picked_piece_line, game->picked_piece_column);
+    }
+
     if (picked_piece_size(game) == NONE) {
         return EMPTY;
     }
 
-    if (movement_left(game) < 1) {
+    if (movement_left(game) == -1) {
         return PARAM;
     }
 
@@ -267,7 +271,7 @@ return_code move_piece(board game, direction direction) {
         return PARAM;
     }
 
-    if (is_goal_reachable(game) == false) {
+    if (direction == GOAL && is_goal_reachable(game) == false) {
         return FORBIDDEN;
     }
 
@@ -292,37 +296,29 @@ return_code move_piece(board game, direction direction) {
         return PARAM;
     }
 
-    if (game->movement_left == 1 && game->map[next_line][next_column] == NONE) {     
-        game->picked_piece_line = next_line;
-        game->picked_piece_column = next_column; 
-        terminate_move(game);
-    } else if (game->movement_left == 1 && game->map[next_line][next_column] != NONE) {
-        game->picked_piece_line = next_line;
-        game->picked_piece_column = next_column; 
-        terminate_move(game);
-        switch (get_piece_size(game, next_line, next_column)) {
-            case ONE:
-                game->movement_left = 1;
-                break;
-            case TWO:
-                game->movement_left = 2;
-                break;
-            case THREE:
-                game->movement_left = 3;
-                break;
-            case NONE:
-                return EMPTY;
-                break;
+    if (game->map[next_line][next_column] != NONE) {
+        if (game->movement_left > 1){
+            return FORBIDDEN;
+        } else {
+            game->picked_piece_line = next_line;
+            game->picked_piece_column = next_column; 
+            game->movement_left --;
         }
-    } else {
+    } else if (game->movement_left == 1) {     
         game->picked_piece_line = next_line;
         game->picked_piece_column = next_column; 
         terminate_move(game);
+    }
+    else {
+        game->picked_piece_line = next_line;
+        game->picked_piece_column = next_column; 
+        game->movement_left --;
     }
 
     return OK;
 
 }
+
 return_code swap_piece(board game, int target_line, int target_column) {
     if (game->movement_left != 0) {
         return EMPTY;
