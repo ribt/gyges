@@ -4,7 +4,11 @@
 void affichage(board game) {
     for (int l = DIMENSION-1; l >= 0; l--) {
         for (int c = 0; c < DIMENSION; c++) {
-            printf("%d ", get_piece_size(game, l, c));
+            if (l==picked_piece_line(game) && c==picked_piece_column(game)) {
+                printf("%d*", picked_piece_size(game));
+            } else {
+                printf("%d ", get_piece_size(game, l, c));
+            }
         }
         printf("\n");
     }
@@ -108,11 +112,38 @@ int main() {
     printf("%d\n", is_move_possible(game, EAST));
     printf("%d\n", is_move_possible(game, WEST));
 
-    printf("%d\n", pick_piece(game, SOUTH_P, 5, 1)); // 72
+    printf("%d\n", pick_piece(game, NORTH_P, 5, 1)); // 72
     printf("%d\n", is_move_possible(game, NORTH));
     printf("%d\n", is_move_possible(game, SOUTH));
     printf("%d\n", is_move_possible(game, EAST));
     printf("%d\n", is_move_possible(game, WEST));
+
+    affichage(game); // 77-82
+
+    /*
+    0(1)2 2 3 3 
+    0 0 0 0 0 0 
+    0 0 0 0 0 0 
+    0 0 0 0 0 0 
+    0 0 0 0 0 0 
+    0 0 2 3 1 2
+    */
+
+    printf("%d\n", movement_left(game));// 83-93
+    printf("%d\n", move_piece(game, NORTH)); // out of the board
+    printf("%d\n", movement_left(game));
+    printf("%d\n", move_piece(game, EAST)); // bounce
+    printf("%d\n", movement_left(game));
+    printf("%d\n", move_piece(game, EAST)); // blocking piece
+    printf("%d\n", movement_left(game));
+    printf("%d\n", move_piece(game, SOUTH)); // normal
+    printf("%d\n", movement_left(game));
+    printf("%d\n", move_piece(game, SOUTH)); // normal -> finished
+    printf("%d\n", movement_left(game));
+
+    affichage(game); // 94 - 99
+
+
 
 
     return 0;
