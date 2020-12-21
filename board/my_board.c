@@ -260,6 +260,7 @@ void terminate_move(board game) {
 return_code move_piece(board game, direction direction) {
     int next_line = game->picked_piece_line;
     int next_column = game->picked_piece_column;
+    int movement = game->movement_left;
 
     if (picked_piece_size(game) == NONE) {
         return EMPTY;
@@ -298,29 +299,32 @@ return_code move_piece(board game, direction direction) {
         return PARAM;
     }
 
-    if (game->movement_left == 0){
-        game->movement_left = get_piece_size(game, game->picked_piece_line, game->picked_piece_column);
+    if (movement == 0){
+        movement = get_piece_size(game, game->picked_piece_line, game->picked_piece_column);
     }
 
     if (game->map[next_line][next_column] != NONE) {
-        if (game->movement_left > 1){
+        if (movement != 1 ){  //Il y a quelques chose et il reste pas un seul déplacement
             return FORBIDDEN;
-        } else {
+        } else {    //Il y a quelque chose et il reste un seul déplacement
             game->picked_piece_line = next_line;
             game->picked_piece_column = next_column; 
-            game->movement_left --;
+            movement --;
         }
-    } else if (game->movement_left == 1) {     
+    } else if (game->movement_left == 1) {  //Il y a rien et il ne reste qu'un seul déplacement
         game->picked_piece_line = next_line;
-        game->picked_piece_column = next_column; 
+        game->picked_piece_column = next_column;
         terminate_move(game);
     }
-    else {
+    else {  //Il y a rien et il reste plusieurs déplacements
         game->picked_piece_line = next_line;
         game->picked_piece_column = next_column; 
-        game->movement_left --;
+        movement --;
     }
 
+    if (game->movement_left != -1) {
+        game->movement_left = movement;
+    }
     return OK;
 
 }
