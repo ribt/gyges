@@ -1,5 +1,4 @@
 #include <stdlib.h>
-#include <stdio.h> /////////////// TO REMOVE
 #include "board.h"
 
 
@@ -157,6 +156,10 @@ return_code place_piece(board game, size piece, player player, int column) {
     return OK;
 }
 
+bool are_coordinates_valid(int line, int column) {
+    return line >= 0 && line < DIMENSION && column >= 0 && column < DIMENSION;
+}
+
 return_code pick_piece(board game, player current_player, int line, int column) {
     int right_line;
 
@@ -168,7 +171,7 @@ return_code pick_piece(board game, player current_player, int line, int column) 
         return PARAM;
     }
 
-    if (line >= DIMENSION || line < 0 || column >= DIMENSION || column < 0) {
+    if (!are_coordinates_valid(line, column)) {
         return PARAM;
     }
 
@@ -235,7 +238,7 @@ bool is_move_possible(board game, direction testing_direction) {
             return is_goal_reachable(game);
     }
 
-    if (next_line < 0 || next_line >= DIMENSION || next_column < 0 || next_column >= DIMENSION) {
+    if (!are_coordinates_valid(next_line, next_column)) {
         return false;
     }
     if (game->map[next_line][next_column] != NONE) {
@@ -295,7 +298,7 @@ return_code move_piece(board game, direction direction) {
             break;
     }
 
-    if (next_line < 0 || next_line >= DIMENSION || next_column < 0 || next_column >= DIMENSION) {
+    if (!are_coordinates_valid(next_line, next_column)) {
         return PARAM;
     }
 
@@ -333,7 +336,7 @@ return_code swap_piece(board game, int target_line, int target_column) {
     if (game->movement_left != 0) {
         return EMPTY;
     }
-    if (target_line < 0 || target_line >= DIMENSION || target_column < 0 || target_column >= DIMENSION) {
+    if (!are_coordinates_valid(target_line, target_column)) {
         return PARAM;
     }
     if (game->map[target_line][target_column] != NONE
