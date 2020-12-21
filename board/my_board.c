@@ -73,7 +73,6 @@ int southmost_occupied_line(board game) {
             }
         }
     }
-
     return -1;
 }
 
@@ -85,7 +84,6 @@ int northmost_occupied_line(board game) {
             }
         }
     }
-
     return -1;
 }
 
@@ -126,18 +124,16 @@ int nb_pieces_available(board game, size piece, player player) {
     }
 
     count = NB_INITIAL_PIECES;
-
     for (int i = 0; i < DIMENSION; i++) {
         if (game->map[line][i] == piece) {
             count--;
         }
     }
-
     return count;
 }
 
 return_code place_piece(board game, size piece, player player, int column) {
-    int line, count;
+    int line;
 
     if (piece != ONE && piece != TWO && piece != THREE) {
         return PARAM;
@@ -155,22 +151,15 @@ return_code place_piece(board game, size piece, player player, int column) {
         return PARAM;
     }
 
-    if (game->map[line][column] != NONE) {
+    if (get_piece_size(game, line, column) != NONE) {
         return EMPTY;
     }
 
-    count = 0;
-    for (int i = 0; i < DIMENSION; i++) {
-        if (game->map[line][i] == piece) {
-            count++;
-        }
-    }
-    if (count >= NB_INITIAL_PIECES) {
+    if (nb_pieces_available(game, piece, player) <= 0) {
         return FORBIDDEN;
     }
 
     game->map[line][column] = piece;
-
     return OK;
 }
 
@@ -217,17 +206,17 @@ size size_under_picked_piece(board game) {
 }
 
 bool is_goal_reachable(board game) {
-    int movement_left = game->movement_left;
+    int movement = game->movement_left;
     
-    if (movement_left == 0) {
-        movement_left = size_under_picked_piece(game); 
+    if (movement == 0) {
+        movement = size_under_picked_piece(game); 
     }
 
-    if (game->current_player == NORTH_P && game->picked_piece_line == 0 && movement_left == 1) {
+    if (game->current_player == NORTH_P && game->picked_piece_line == 0 && movement == 1) {
         return true;
     }
 
-    if (game->current_player == SOUTH_P && game->picked_piece_line == DIMENSION-1 && movement_left == 1) {
+    if (game->current_player == SOUTH_P && game->picked_piece_line == DIMENSION-1 && movement == 1) {
         return true;
     }
 
@@ -237,12 +226,13 @@ bool is_goal_reachable(board game) {
 bool is_move_possible(board game, direction testing_direction) {
     int next_line = game->picked_piece_line;
     int next_column = game->picked_piece_column;
-
-    if (game->movement_left == -1) {
-        return false;
+    int movement = game->movement_left;
+    
+    if (movement == 0) {
+        movement = size_under_picked_piece(game); 
     }
 
-    if (game->movement_left == 0 && size_under_picked_piece(game) == NONE) {
+    if (movement <= 0) {
         return false;
     }
 
@@ -259,7 +249,6 @@ bool is_move_possible(board game, direction testing_direction) {
         case WEST: 
             next_column--;
             break;
-
         case GOAL:
             return is_goal_reachable(game);
     }
@@ -267,19 +256,21 @@ bool is_move_possible(board game, direction testing_direction) {
     if (!are_coordinates_valid(next_line, next_column)) {
         return false;
     }
-    if (game->map[next_line][next_column] != NONE) {
-        if (game->movement_left == 1) {
-            return true;
-        } else {
-            return false;
-        }
+
+    if (get_piece_size(game, next_line, next_column) != NONE && movement != 1) {
+        return false;
     }
+
+    // TODO :
+    //  check if we already entered this position from the same side
 
     return true;
 }
 
 void terminate_move(board game) {
-    game->map[picked_piece_line(game)][picked_piece_column(game)] = picked_piece_size(game);
+    if (get_winner(game) == NO_PLAYER) {
+        game->map[picked_piece_line(game)][picked_piece_column(game)] = picked_piece_size(game);
+    }
     game->movement_left = -1;
     game->current_player = NO_PLAYER;
     game->picked_piece_size = NONE;
@@ -291,22 +282,19 @@ void terminate_move(board game) {
 return_code move_piece(board game, direction direction) {
     int next_line = game->picked_piece_line;
     int next_column = game->picked_piece_column;
-    int movement_left = game->movement_left;
 
     if (picked_piece_size(game) == NONE) {
         return EMPTY;
     }
 
-    if (movement_left(game) == -1) {
-        return PARAM;
-    }
-
-    if (picked_piece_owner(game) == NO_PLAYER) {
-        return PARAM;
-    }
-
-    if (direction == GOAL && is_goal_reachable(game) == false) {
-        return FORBIDDEN;
+    if (direction == GOAL) {
+        if (is_goal_reachable(game)) {
+            game->winner = game->current_player;
+            terminate_move(game);
+            return OK;
+        } else {
+            return FORBIDDEN;
+        }
     }
 
     switch (direction) {
@@ -322,7 +310,7 @@ return_code move_piece(board game, direction direction) {
         case WEST: 
             next_column--;  
             break;
-        case GOAL:
+        case GOAL: // avoids a warning
             break;
     }
 
@@ -330,30 +318,21 @@ return_code move_piece(board game, direction direction) {
         return PARAM;
     }
 
-    if (movement_left == 0){
-        movement_left = size_under_picked_piece(game);
+    if (!is_move_possible(game, direction)) {
+        return FORBIDDEN;
     }
 
-    if (game->map[next_line][next_column] != NONE) {
-        if (movement_left != 1) {  //Il y a quelques chose et il reste pas un seul déplacement
-            return FORBIDDEN;
-        } else {    //Il y a quelque chose et il reste un seul déplacement
-            game->picked_piece_line = next_line;
-            game->picked_piece_column = next_column; 
-            movement_left--;
-        }
-    } else if (game->movement_left == 1) {  //Il y a rien et il ne reste qu'un seul déplacement
-        game->picked_piece_line = next_line;
-        game->picked_piece_column = next_column;
+    if (game->movement_left == 0) {
+        game->movement_left = size_under_picked_piece(game);
+    }
+
+    game->picked_piece_line = next_line;
+    game->picked_piece_column = next_column;
+    game->movement_left--;
+
+    if (game->movement_left == 0 && size_under_picked_piece(game) == NONE) {
         terminate_move(game);
-    } else {  //Il y a rien et il reste plusieurs déplacements
-        game->picked_piece_line = next_line;
-        game->picked_piece_column = next_column; 
-        movement_left--;
-    }
-
-    if (game->movement_left != -1) {
-        game->movement_left = movement_left;
+        return OK;
     }
 
     game->positions_history[game->history_len][0] = next_line;
@@ -361,7 +340,6 @@ return_code move_piece(board game, direction direction) {
     game->history_len++;
 
     return OK;
-
 }
 
 return_code swap_piece(board game, int target_line, int target_column) {
@@ -378,9 +356,7 @@ return_code swap_piece(board game, int target_line, int target_column) {
     }
 
     game->map[target_line][target_column] = size_under_picked_piece(game);
-    
     terminate_move(game);
-
     return OK;
 }
 
@@ -392,7 +368,6 @@ return_code cancel_movement(board game) {
     game->picked_piece_line = game->positions_history[0][0];
     game->picked_piece_column = game->positions_history[0][1];
     terminate_move(game);
-
     return OK;
 }
 
