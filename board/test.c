@@ -199,6 +199,23 @@ int main() {
     printf("%d\n", movement_left(game));
     affichage(game);
 
+    /*
+    0 0 2 2 3 3 
+    0 0 0 0 0 0 
+    0 0 1 0 0 0 
+    0 0 0 0 0 0 
+    0 0 0 0 0 0 
+    0 0 2 3 1 2
+    */
+
+    printf("%d\n", pick_piece(game, SOUTH_P, 0, 3)); // 169 
+    affichage(game);
+    printf("%d\n", move_piece(game, NORTH));
+    printf("%d\n", move_piece(game, SOUTH));
+    printf("%d\n", move_piece(game, NORTH)); // forbidden move
+
+
+
 
 
 

@@ -261,8 +261,12 @@ bool is_move_possible(board game, direction testing_direction) {
         return false;
     }
 
-    // TODO :
-    //  check if we already entered this position from the same side
+    for (int i = 0; i < game->history_len-1; i++) {
+        if (game->positions_history[i][0] == picked_piece_line(game) && game->positions_history[i][1] == picked_piece_column(game)
+             && game->positions_history[i+1][0] == next_line && game->positions_history[i+1][1] == next_column) {
+            return false;
+        }
+    }
 
     return true;
 }
