@@ -411,6 +411,27 @@ int main() {
     printf("%d\n", move_piece(game, GOAL));
     affichage(game);
 
+    board tmp = copy_game(game);
+
+    printf("%d\n", is_move_possible(tmp, NORTH)); 
+    printf("%d\n", is_move_possible(tmp, SOUTH));
+    printf("%d\n", is_move_possible(tmp, EAST));
+    printf("%d\n", is_move_possible(tmp, WEST));
+    printf("%d\n", is_move_possible(tmp, GOAL));
+    printf("%d\n", picked_piece_size(tmp));
+    printf("%d\n", picked_piece_owner(tmp));
+    printf("%d\n", picked_piece_line(tmp));
+    printf("%d\n", picked_piece_column(tmp));
+    printf("%d\n", movement_left(tmp));
+    printf("%d\n", get_winner(tmp));
+    printf("%d\n", nb_pieces_available(tmp, ONE, NORTH_P));
+    printf("%d\n", nb_pieces_available(tmp, TWO, NORTH_P));
+    printf("%d\n", nb_pieces_available(tmp, THREE, NORTH_P));
+    printf("%d\n", nb_pieces_available(tmp, ONE, SOUTH_P));
+    printf("%d\n", nb_pieces_available(tmp, TWO, SOUTH_P));
+    printf("%d\n", nb_pieces_available(tmp, THREE, SOUTH_P));
+    affichage(tmp);
+
 
 
 
