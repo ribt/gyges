@@ -78,6 +78,31 @@ board new_game() {
     return new_board;
 }
 
+board copy_game(board original_board) {
+    board new_board = malloc(sizeof(struct board_s));
+
+    for (int line = 0; line < DIMENSION; line++) {
+        for (int column = 0; column < DIMENSION; column++) {
+            new_board->map[column][line] = original_board->map[column][line];
+        }
+    }
+
+    new_board->picked_piece_size = original_board->picked_piece_size;
+    new_board->current_player = original_board->current_player;
+    new_board->picked_piece_line = original_board->picked_piece_line;
+    new_board->picked_piece_column = original_board->picked_piece_column;
+    new_board->movement_left = original_board->movement_left;
+    new_board->winner = original_board->winner;
+    new_board->history_len = original_board->history_len;
+
+    for (int i = 0; i < original_board->history_len; i++) {
+        new_board->positions_history[i][0] = original_board->positions_history[i][0];
+        new_board->positions_history[i][1] = original_board->positions_history[i][1];
+    }
+
+    return new_board;
+}
+
 void destroy_game(board game) {
     free(game);
 }
