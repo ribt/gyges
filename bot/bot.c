@@ -1,6 +1,8 @@
 #include "board.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include "display.h"
 
 #define MAX_PATH_LEN 100
 
@@ -25,23 +27,15 @@ typedef struct {
 } position;
 
 
+typedef struct {
+    position piece;
+    path path;
+} move;
+
 void copy_path(path *src, path *dst) {
     dst->len = src->len;
     for (int i=0; i<dst->len; i++) {
         dst->directions[i] = src->directions[i];
-    }
-}
-
-void affichage(board game) {
-    for (int l = DIMENSION-1; l >= 0; l--) {
-        for (int c = 0; c < DIMENSION; c++) {
-            if (l==picked_piece_line(game) && c==picked_piece_column(game)) {
-                printf("* ");
-            } else {
-                printf("%d ", get_piece_size(game, l, c));
-            }
-        }
-        printf("\n");
     }
 }
 
@@ -72,7 +66,7 @@ int *pickable_pieces(board game, player player) {
     return rep;
 }
 
-char *aff_dir(direction dir) {
+char *dir_string(direction dir) {
     switch (dir) {
         case SOUTH: return "SOUTH";
         case NORTH: return "NORTH";
@@ -84,7 +78,7 @@ char *aff_dir(direction dir) {
     return "";
 }
 
-bool win(board game) {
+bool try_to_win(board game) {
     board tmp;
 
     if (picked_piece_line(game)==-1)
@@ -99,7 +93,7 @@ bool win(board game) {
         if (is_move_possible(game, dir)) {
             tmp = copy_game(game);
             move_piece(tmp, dir);
-            if (win(tmp))
+            if (try_to_win(tmp))
                 return 1;
             destroy_game(tmp);
         }
@@ -118,7 +112,7 @@ bool can_win(board game, player player) {
     while (i < DIMENSION && playable[i] != -1) {
         tmp = copy_game(game);
         pick_piece(tmp, player, line, playable[i]);
-        if (win(tmp)) {
+        if (try_to_win(tmp)) {
             return 1;
         }
         destroy_game(tmp);
@@ -136,13 +130,10 @@ void disp_path(path path) {
 
 path win_path(board game, path current_path) {
     path best_path;
-    best_path.len = 999;
+    best_path.len = 0;
     board tmp_board;
     path ret_path;
     path tmp_path;
-
-    printf("win_path(");
-    disp_path(current_path);
 
     if (picked_piece_line(game)==-1)
         return NULL_PATH;
@@ -162,17 +153,17 @@ path win_path(board game, path current_path) {
             tmp_path.len++;
             ret_path = win_path(tmp_board, tmp_path);
             if (ret_path.len > 0) {
-                if (ret_path.len < best_path.len) {
+                if (best_path.len == 0 || ret_path.len < best_path.len) {
                     copy_path(&ret_path, &best_path);
                 }
             }
             destroy_game(tmp_board);
         }
     }
-    return NULL_PATH;
+    return best_path;
 }
 
-path best_path_to_win(board game, player player) {
+move best_move_to_win(board game, player player) {
     int line = player_line(game, player); 
     int i = 0;
     int *playable = pickable_pieces(game, player);
@@ -180,6 +171,9 @@ path best_path_to_win(board game, player player) {
     path best_path;
     best_path.len = 999;
     path tmp_path;
+    position piece;
+    piece.line = line;
+    move rep;
 
     while (i < DIMENSION && playable[i] != -1) {
         tmp_board = copy_game(game);
@@ -187,27 +181,39 @@ path best_path_to_win(board game, player player) {
         tmp_path = win_path(tmp_board, NULL_PATH);
         if (tmp_path.len > 0) {
             if (tmp_path.len < best_path.len) {
-                printf("new min len : %d\n", tmp_path.len);
+                //printf("new min len : %d\n", tmp_path.len);
                 copy_path(&tmp_path, &best_path);
+                piece.column = playable[i];
             }
         }
         destroy_game(tmp_board);
         i++;
     }
-    return best_path;
+    rep.piece = piece;
+    rep.path = best_path;
+    return rep;
 }
 
-
+void bot_move(board game, player player, move move) {
+    pick_piece(game, player, move.piece.line, move.piece.column);
+    disp_board(game);
+    for (int i = 0; i < move.path.len; i++) {
+        sleep(1);
+        clear_screen();
+        move_piece(game, move.path.directions[i]);
+        disp_board(game);        
+    }
+}
 
 int main() {
     board game = new_game();
     int map[DIMENSION][DIMENSION]= {
-        {3, 0, 0, 0, 0, 3},
+        {3, 0, 2, 0, 0, 3},
         {0, 0, 0, 0, 0, 3},
         {0, 0, 1, 0, 2, 0},
         {0, 0, 2, 0, 1, 1},
         {0, 0, 0, 0, 0, 2},
-        {1, 0, 2, 0, 0, 0}
+        {1, 3, 0, 0, 0, 0}
     };
 
     set_map(game, map);
@@ -218,9 +224,9 @@ int main() {
     if (can_win(game, NORTH_P)) {printf("NORTH can win\n");}
     if (can_win(game, SOUTH_P)) {printf("SOUTH can win\n");}
 
-    printf("\n");
+    clear_screen();
 
-    disp_path(best_path_to_win(game, SOUTH_P));
+    bot_move(game, SOUTH_P, best_move_to_win(game, SOUTH_P));
     
 
 }

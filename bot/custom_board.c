@@ -28,19 +28,6 @@ void set_map(board game, int map[DIMENSION][DIMENSION]) {
     }
 }
 
-void disp_board(board game) {
-    for (int l = DIMENSION-1; l >= 0; l--) {
-        for (int c = 0; c < DIMENSION; c++) {
-            if (l==picked_piece_line(game) && c==picked_piece_column(game)) {
-                printf("* ");
-            } else {
-                printf("%d ", get_piece_size(game, l, c));
-            }
-        }
-        printf("\n");
-    }
-}
-
 int get_history_len(board game) {
     return game->history_len;
 }
