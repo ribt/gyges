@@ -81,15 +81,16 @@ char *dir_string(direction dir) {
 bool try_to_win(board game) {
     board tmp;
 
-    if (picked_piece_line(game)==-1)
+    if (picked_piece_line(game)==-1) {
+        printf("JE SUIS PAS INUTILE\n");
         return 0;
+    }
 
     if (is_goal_reachable(game)) {
-        //disp_history(game);
         return 1;
     }
 
-    for (int dir = 1; dir < 5; dir++) { // GOAL, SOUTH, NORTH, EAST, WEST
+    for (direction dir = SOUTH; dir <= WEST; dir++) { // GOAL, SOUTH, NORTH, EAST, WEST
         if (is_move_possible(game, dir)) {
             tmp = copy_game(game);
             move_piece(tmp, dir);
@@ -121,22 +122,12 @@ bool can_win(board game, player player) {
     return 0;
 }
 
-void disp_path(path path) {
-    for (int i = 0; i < path.len; i++) {
-        printf("%s ", aff_dir(path.directions[i]));
-    }
-    printf("\n");
-}
-
 path win_path(board game, path current_path) {
     path best_path;
     best_path.len = 0;
     board tmp_board;
     path ret_path;
     path tmp_path;
-
-    if (picked_piece_line(game)==-1)
-        return NULL_PATH;
 
     if (is_goal_reachable(game)) {
         current_path.directions[current_path.len] = GOAL;
@@ -181,7 +172,6 @@ move best_move_to_win(board game, player player) {
         tmp_path = win_path(tmp_board, NULL_PATH);
         if (tmp_path.len > 0) {
             if (tmp_path.len < best_path.len) {
-                //printf("new min len : %d\n", tmp_path.len);
                 copy_path(&tmp_path, &best_path);
                 piece.column = playable[i];
             }
@@ -207,7 +197,7 @@ void bot_move(board game, player player, move move) {
 
 int main() {
     board game = new_game();
-    int map[DIMENSION][DIMENSION]= {
+    int map[DIMENSION][DIMENSION] = {
         {3, 0, 2, 0, 0, 3},
         {0, 0, 0, 0, 0, 3},
         {0, 0, 1, 0, 2, 0},
@@ -218,11 +208,13 @@ int main() {
 
     set_map(game, map);
 
-    affichage(game);
+    disp_board(game);
     printf("\n");
 
     if (can_win(game, NORTH_P)) {printf("NORTH can win\n");}
     if (can_win(game, SOUTH_P)) {printf("SOUTH can win\n");}
+
+    sleep(1);
 
     clear_screen();
 
