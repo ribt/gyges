@@ -6,6 +6,8 @@
 #include <time.h>
 
 #define MAX_PATH_LEN 100
+#define PAUSE_SEC 1
+#define DEBUG 0 
 
 typedef struct {
     int len;
@@ -48,10 +50,11 @@ int player_line(board game, player bot) {
     return -1;
 }
 
+// the first int is the size of the list
 int *pickable_pieces(board game, player bot) {
-    int *rep = malloc(DIMENSION*sizeof(int));
+    int *rep = malloc((DIMENSION+1)*sizeof(int));
     int line = player_line(game, bot); 
-    int i = 0;
+    int i = 1;
 
     for (int column = 0; column < DIMENSION; column++) {
         if (get_piece_size(game, line, column) != NONE) {
@@ -60,11 +63,7 @@ int *pickable_pieces(board game, player bot) {
         }
     }
 
-    while (i < DIMENSION) {
-        rep[i] = -1;
-        i++;
-    }
-
+    rep[0] = i-1;
     return rep;
 }
 
@@ -110,15 +109,13 @@ bool try_to_win(board game) {
     return 0;
 }
 
-
-
 bool can_win(board game, player testing_player) {
     int line = player_line(game, testing_player); 
-    int i = 0;
+    int i = 1;
     int *playable = pickable_pieces(game, testing_player);
     board tmp;
 
-    while (i < DIMENSION && playable[i] != -1) {
+    while (i <= playable[0]) {
         tmp = copy_game(game);
         pick_piece(tmp, testing_player, line, playable[i]);
         if (try_to_win(tmp)) {
@@ -163,7 +160,7 @@ path win_path(board game, path current_path) {
 
 move best_move_to_win(board game, player bot) {
     int line = player_line(game, bot); 
-    int i = 0;
+    int i = 1;
     int *playable = pickable_pieces(game, bot);
     board tmp_board;
     path best_path;
@@ -173,7 +170,7 @@ move best_move_to_win(board game, player bot) {
     piece.line = line;
     move rep;
 
-    while (i < DIMENSION && playable[i] != -1) {
+    while (i <= playable[0]) {
         tmp_board = copy_game(game);
         pick_piece(tmp_board, bot, line, playable[i]);
         ret_path = win_path(tmp_board, NULL_PATH);
@@ -190,20 +187,42 @@ move best_move_to_win(board game, player bot) {
     return rep;
 }
 
-void bot_move(board game, player bot) {
-    move move;
-    if (can_win(game, bot)) {
-        move = best_move_to_win(game, bot);
-    } else {
-        printf("sorry je sais pas quoi jouer\n");
-        return;
-    }
+// execute and display a move
+void disp_move(board game, player bot, move move) {
     pick_piece(game, bot, move.piece.line, move.piece.column);
     disp_board(game);
     for (int i = 0; i < move.path.len; i++) {
-        sleep(1);
-        clear_screen();
+        if (!DEBUG) {
+            sleep(PAUSE_SEC);
+            clear_screen();
+        }
         move_piece(game, move.path.directions[i]);
         disp_board(game);        
     }
+}
+
+void disp_random_move(board game, player bot) {
+    if (movement_left(game) == -1) {
+        return;
+    }
+
+    while (movement_left(game) > -1) {
+        if (move_piece(game, rand()%4+1) == OK) {  // GOAL, SOUTH, NORTH, EAST, WEST
+            if (!DEBUG) {
+                sleep(PAUSE_SEC);
+                clear_screen();
+            }
+            disp_board(game);
+                
+        }
+    }
+}
+
+void bot_move(board game, player bot) {
+    if (can_win(game, bot)) {
+        disp_move(game, bot, best_move_to_win(game, bot));
+    } else {
+        disp_random_move(game, bot);
+    }
+    
 }
