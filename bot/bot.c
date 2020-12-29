@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include "display.h"
+#include <time.h>
 
 #define MAX_PATH_LEN 100
 
@@ -79,6 +80,16 @@ char *dir_string(direction dir) {
     return "";
 }
 
+void random_piece_placement(board game, player bot) {
+    int column = 0;
+    srand(time(NULL));
+    while (column < DIMENSION) {
+        if (place_piece(game, rand()%3+1, bot, column) == OK) {
+            column++;
+        }
+    }
+}
+
 bool try_to_win(board game) {
     board tmp;
 
@@ -101,15 +112,15 @@ bool try_to_win(board game) {
 
 
 
-bool can_win(board game, player bot) {
-    int line = player_line(game, bot); 
+bool can_win(board game, player testing_player) {
+    int line = player_line(game, testing_player); 
     int i = 0;
-    int *playable = pickable_pieces(game, bot);
+    int *playable = pickable_pieces(game, testing_player);
     board tmp;
 
     while (i < DIMENSION && playable[i] != -1) {
         tmp = copy_game(game);
-        pick_piece(tmp, bot, line, playable[i]);
+        pick_piece(tmp, testing_player, line, playable[i]);
         if (try_to_win(tmp)) {
             return 1;
         }
