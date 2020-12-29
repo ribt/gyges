@@ -201,32 +201,61 @@ void disp_move(board game, player bot, move move) {
     }
 }
 
-void pick_random_piece(board game, player bot) {
-    while (picked_piece_size(game) == NONE) {
-        pick_piece(game, bot, player_line(game, bot), rand()%DIMENSION);
-    }
+position random_pickable_piece(board game, player bot) {
+    position rep;
+    int *pickable = pickable_pieces(game, bot);
+
+    rep.line = player_line(game, bot);
+    rep.column = pickable[rand()%pickable[0] + 1];
+
+    return rep;
 }
 
-void disp_random_move(board game, player bot) {
-    pick_random_piece(game, bot);
-
-    while (movement_left(game) > -1) {
-        if (move_piece(game, rand()%4+1) == OK) {  // GOAL, SOUTH, NORTH, EAST, WEST
-            if (!DEBUG) {
-                sleep(PAUSE_SEC);
-                clear_screen();
-            }
-            disp_board(game);
-                
+bool i_am_blocked(board game, player bot) {
+    if (movement_left(game) == -1) {
+        return false;
+    }
+    for (int dir = SOUTH; dir <= WEST; dir++) {
+        if (is_move_possible(game, dir)) {
+            return false;
         }
     }
+    return true;
+}
+
+move random_move(board game, player bot) {
+    move rep;
+    return_code response;
+    direction rand_dir;
+    board tmp_game = copy_game(game);
+
+    rep.path.len = 0;
+
+    rep.piece = random_pickable_piece(tmp_game, bot);
+    pick_piece(tmp_game, bot, rep.piece.line, rep.piece.column);
+
+    while (movement_left(tmp_game) > -1) {
+        rand_dir = rand()%4+1;       // GOAL, SOUTH, NORTH, EAST, WEST
+        response = move_piece(tmp_game, rand_dir);
+        if (i_am_blocked(tmp_game, bot) || rep.path.len == MAX_PATH_LEN) {
+            cancel_movement(tmp_game);
+            rep.path.len = 0;
+            rep.piece = random_pickable_piece(tmp_game, bot);
+            pick_piece(tmp_game, bot, rep.piece.line, rep.piece.column);
+        } else if (response == OK) {
+            rep.path.directions[rep.path.len] = rand_dir;
+            rep.path.len++;                
+        }
+    }
+    destroy_game(tmp_game);
+    return rep;
 }
 
 void bot_move(board game, player bot) {
     if (can_win(game, bot)) {
         disp_move(game, bot, best_move_to_win(game, bot));
     } else {
-        disp_random_move(game, bot);
+        disp_move(game, bot, random_move(game, bot));
     }
     
 }

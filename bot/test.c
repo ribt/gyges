@@ -22,11 +22,11 @@ int main() {
 
     // bot_move(game, SOUTH_P);
 
-    clear_screen();
-
     random_piece_placement(game, NORTH_P);
 
-    disp_board(game);
+    // disp_board(game);
+
+    clear_screen();
 
     bot_move(game, NORTH_P);
     
