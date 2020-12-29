@@ -7,9 +7,6 @@
 #define MAX_PATH_LEN 100
 
 void set_map(board game, int map[DIMENSION][DIMENSION]);
-bool is_goal_reachable(board game);
-void disp_history(board game);
-int get_history_len(board game);
 
 typedef struct {
     int len;
@@ -86,7 +83,7 @@ bool try_to_win(board game) {
         return 0;
     }
 
-    if (is_goal_reachable(game)) {
+    if (is_move_possible(game, GOAL)) {
         return 1;
     }
 
@@ -129,7 +126,7 @@ path win_path(board game, path current_path) {
     path ret_path;
     path tmp_path;
 
-    if (is_goal_reachable(game)) {
+    if (is_move_possible(game, GOAL)) {
         current_path.directions[current_path.len] = GOAL;
         current_path.len++;
         return current_path;
