@@ -23,31 +23,35 @@ typedef struct {
     int column;
 } position;
 
-
 typedef struct {
     position piece;
     path path;
 } move;
 
+
 void copy_path(path *src, path *dst) {
     dst->len = src->len;
-    for (int i=0; i<dst->len; i++) {
+    for (int i = 0; i < dst->len; i++) {
         dst->directions[i] = src->directions[i];
     }
 }
 
 
-int player_line(board game, player player) {
-    if (player == NORTH_P)
+int player_line(board game, player bot) {
+    if (bot == NORTH_P) {
         return northmost_occupied_line(game);
-    if (player == SOUTH_P)
+    }
+
+    if (bot == SOUTH_P) {
         return southmost_occupied_line(game);
+    }
+
     return -1;
 }
 
-int *pickable_pieces(board game, player player) {
+int *pickable_pieces(board game, player bot) {
     int *rep = malloc(DIMENSION*sizeof(int));
-    int line = player_line(game, player); 
+    int line = player_line(game, bot); 
     int i = 0;
 
     for (int column = 0; column < DIMENSION; column++) {
@@ -56,10 +60,12 @@ int *pickable_pieces(board game, player player) {
             i++;
         }
     }
+
     while (i < DIMENSION) {
         rep[i] = -1;
         i++;
     }
+
     return rep;
 }
 
@@ -78,11 +84,6 @@ char *dir_string(direction dir) {
 bool try_to_win(board game) {
     board tmp;
 
-    if (picked_piece_line(game)==-1) {
-        printf("JE SUIS PAS INUTILE\n");
-        return 0;
-    }
-
     if (is_move_possible(game, GOAL)) {
         return 1;
     }
@@ -91,8 +92,9 @@ bool try_to_win(board game) {
         if (is_move_possible(game, dir)) {
             tmp = copy_game(game);
             move_piece(tmp, dir);
-            if (try_to_win(tmp))
+            if (movement_left(tmp) > -1 && try_to_win(tmp)) {
                 return 1;
+            }
             destroy_game(tmp);
         }
     }
@@ -101,27 +103,28 @@ bool try_to_win(board game) {
 
 
 
-bool can_win(board game, player player) {
-    int line = player_line(game, player); 
+bool can_win(board game, player bot) {
+    int line = player_line(game, bot); 
     int i = 0;
-    int *playable = pickable_pieces(game, player);
+    int *playable = pickable_pieces(game, bot);
     board tmp;
 
     while (i < DIMENSION && playable[i] != -1) {
         tmp = copy_game(game);
-        pick_piece(tmp, player, line, playable[i]);
+        pick_piece(tmp, bot, line, playable[i]);
         if (try_to_win(tmp)) {
             return 1;
         }
         destroy_game(tmp);
         i++;
     }
+    free(playable);
     return 0;
 }
 
 path win_path(board game, path current_path) {
     path best_path;
-    best_path.len = 0;
+    best_path.len = 999;
     board tmp_board;
     path ret_path;
     path tmp_path;
@@ -140,10 +143,8 @@ path win_path(board game, path current_path) {
             tmp_path.directions[current_path.len] = dir;
             tmp_path.len++;
             ret_path = win_path(tmp_board, tmp_path);
-            if (ret_path.len > 0) {
-                if (best_path.len == 0 || ret_path.len < best_path.len) {
-                    copy_path(&ret_path, &best_path);
-                }
+            if (ret_path.len > 0 && ret_path.len < best_path.len) {
+                copy_path(&ret_path, &best_path);
             }
             destroy_game(tmp_board);
         }
@@ -151,38 +152,37 @@ path win_path(board game, path current_path) {
     return best_path;
 }
 
-move best_move_to_win(board game, player player) {
-    int line = player_line(game, player); 
+move best_move_to_win(board game, player bot) {
+    int line = player_line(game, bot); 
     int i = 0;
-    int *playable = pickable_pieces(game, player);
+    int *playable = pickable_pieces(game, bot);
     board tmp_board;
     path best_path;
     best_path.len = 999;
-    path tmp_path;
+    path ret_path;
     position piece;
     piece.line = line;
     move rep;
 
     while (i < DIMENSION && playable[i] != -1) {
         tmp_board = copy_game(game);
-        pick_piece(tmp_board, player, line, playable[i]);
-        tmp_path = win_path(tmp_board, NULL_PATH);
-        if (tmp_path.len > 0) {
-            if (tmp_path.len < best_path.len) {
-                copy_path(&tmp_path, &best_path);
-                piece.column = playable[i];
-            }
+        pick_piece(tmp_board, bot, line, playable[i]);
+        ret_path = win_path(tmp_board, NULL_PATH);
+        if (ret_path.len > 0 && ret_path.len < best_path.len) {
+            copy_path(&ret_path, &best_path);
+            piece.column = playable[i];
         }
         destroy_game(tmp_board);
         i++;
     }
+    free(playable);
     rep.piece = piece;
     rep.path = best_path;
     return rep;
 }
 
-void bot_move(board game, player player, move move) {
-    pick_piece(game, player, move.piece.line, move.piece.column);
+void bot_move(board game, player bot, move move) {
+    pick_piece(game, bot, move.piece.line, move.piece.column);
     disp_board(game);
     for (int i = 0; i < move.path.len; i++) {
         sleep(1);
