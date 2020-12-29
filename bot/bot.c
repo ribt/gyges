@@ -201,10 +201,14 @@ void disp_move(board game, player bot, move move) {
     }
 }
 
-void disp_random_move(board game, player bot) {
-    if (movement_left(game) == -1) {
-        return;
+void pick_random_piece(board game, player bot) {
+    while (picked_piece_size(game) == NONE) {
+        pick_piece(game, bot, player_line(game, bot), rand()%DIMENSION);
     }
+}
+
+void disp_random_move(board game, player bot) {
+    pick_random_piece(game, bot);
 
     while (movement_left(game) > -1) {
         if (move_piece(game, rand()%4+1) == OK) {  // GOAL, SOUTH, NORTH, EAST, WEST
