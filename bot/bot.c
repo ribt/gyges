@@ -6,8 +6,6 @@
 
 #define MAX_PATH_LEN 100
 
-void set_map(board game, int map[DIMENSION][DIMENSION]);
-
 typedef struct {
     int len;
     direction directions[MAX_PATH_LEN];
@@ -181,7 +179,14 @@ move best_move_to_win(board game, player bot) {
     return rep;
 }
 
-void bot_move(board game, player bot, move move) {
+void bot_move(board game, player bot) {
+    move move;
+    if (can_win(game, bot)) {
+        move = best_move_to_win(game, bot);
+    } else {
+        printf("sorry je sais pas quoi jouer\n");
+        return;
+    }
     pick_piece(game, bot, move.piece.line, move.piece.column);
     disp_board(game);
     for (int i = 0; i < move.path.len; i++) {
@@ -190,32 +195,4 @@ void bot_move(board game, player bot, move move) {
         move_piece(game, move.path.directions[i]);
         disp_board(game);        
     }
-}
-
-int main() {
-    board game = new_game();
-    int map[DIMENSION][DIMENSION] = {
-        {3, 0, 2, 0, 0, 3},
-        {0, 0, 0, 0, 0, 3},
-        {0, 0, 1, 0, 2, 0},
-        {0, 0, 2, 0, 1, 1},
-        {0, 0, 0, 0, 0, 2},
-        {1, 3, 0, 0, 0, 0}
-    };
-
-    set_map(game, map);
-
-    disp_board(game);
-    printf("\n");
-
-    if (can_win(game, NORTH_P)) {printf("NORTH can win\n");}
-    if (can_win(game, SOUTH_P)) {printf("SOUTH can win\n");}
-
-    sleep(1);
-
-    clear_screen();
-
-    bot_move(game, SOUTH_P, best_move_to_win(game, SOUTH_P));
-    
-
 }
