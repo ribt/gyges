@@ -81,7 +81,6 @@ char *dir_string(direction dir) {
 
 void random_piece_placement(board game, player bot) {
     int column = 0;
-    srand(time(NULL));
     while (column < DIMENSION) {
         if (place_piece(game, rand()%3+1, bot, column) == OK) {
             column++;
@@ -189,15 +188,14 @@ move best_move_to_win(board game, player bot) {
 
 // execute and display a move
 void disp_move(board game, player bot, move move) {
-    pick_piece(game, bot, move.piece.line, move.piece.column);
     disp_board(game);
+    sleep(PAUSE_SEC);
+    pick_piece(game, bot, move.piece.line, move.piece.column);
     for (int i = 0; i < move.path.len; i++) {
-        if (!DEBUG) {
-            sleep(PAUSE_SEC);
-            clear_screen();
-        }
+        clear_screen();
+        disp_board(game);
+        sleep(PAUSE_SEC);
         move_piece(game, move.path.directions[i]);
-        disp_board(game);        
     }
 }
 

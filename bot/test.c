@@ -6,6 +6,7 @@
 void set_map(board game, int map[DIMENSION][DIMENSION]);
 
 int main() {
+    srand(time(NULL));
     board game = new_game();
     // int map[DIMENSION][DIMENSION] = {
     //     {3, 0, 2, 0, 0, 3},
@@ -22,13 +23,23 @@ int main() {
 
     // bot_move(game, SOUTH_P);
 
+    // int map[DIMENSION][DIMENSION] = {
+    //     {0, 0, 0, 0, 0, 0},
+    //     {0, 0, 0, 0, 0, 0},
+    //     {0, 0, 0, 0, 0, 0},
+    //     {0, 0, 3, 2, 0, 0},
+    //     {1, 0, 0, 2, 1, 3},
+    //     {0, 0, 0, 0, 0, 0}
+    // };
+
+
     random_piece_placement(game, NORTH_P);
+    random_piece_placement(game, SOUTH_P);
 
-    // disp_board(game);
-
-    clear_screen();
-
-    bot_move(game, NORTH_P);
-    
+    while (get_winner(game) == NO_PLAYER) {
+        bot_move(game, NORTH_P);
+        if (get_winner(game)) {break;}
+        bot_move(game, SOUTH_P);
+    } 
 
 }

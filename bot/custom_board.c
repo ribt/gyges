@@ -176,7 +176,7 @@ int southmost_occupied_line(board game) {
 }
 
 int northmost_occupied_line(board game) {
-    for(int line = DIMENSION-1; line >= 0; line++) {
+    for(int line = DIMENSION-1; line >= 0; line--) {
         for (int column = 0; column < DIMENSION; column++) {
             if (get_piece_size(game, line, column) != NONE) {
                 return line;
