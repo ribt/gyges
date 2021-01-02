@@ -4,6 +4,9 @@
 #include <string.h>
 #include "board.h"
 #include "display.h"
+#include "bot.h"
+
+player BOT_P = NORTH_P;
 
 // This one allows us to empty stdin buffer.
 void clear_buffer() {
@@ -40,41 +43,45 @@ void init_game(board game, player *pcurrent_player) {
 	}
 
 	for (int i = 0; i < NB_PLAYERS; i++) {	// do the same for all players (i is never used)
-		for (int j = 0; j < DIMENSION; j++) { // fill history with NONE size
-			history[j] = NONE;
-		}
+        if (*pcurrent_player == BOT_P) {
+            random_piece_placement(game, BOT_P);
+        } else {
+    		for (int j = 0; j < DIMENSION; j++) { // fill history with NONE size
+    			history[j] = NONE;
+    		}
 
-		column = 0;
-		while (column < DIMENSION) {  // place the pieces column by column
-            disp_board(game);
-            printf("Joueur %s, veuillez choisir de gauche à droite la taille des pièces à mettre sur votre première ligne.\nValidez avec Entrée pour chaque pièce.\n> ", player_name(*pcurrent_player));
+    		column = 0;
+    		while (column < DIMENSION) {  // place the pieces column by column
+                disp_board(game);
+                printf("Joueur %s, veuillez choisir de gauche à droite la taille des pièces à mettre sur votre première ligne.\nValidez avec Entrée pour chaque pièce.\n> ", player_name(*pcurrent_player));
 
-            for (int j = 0; j < DIMENSION; j++) {  // display all the pieces already placed
-                if (history[j] != NONE) {
-                    printf("%d ", history[j]);
+                for (int j = 0; j < DIMENSION; j++) {  // display all the pieces already placed
+                    if (history[j] != NONE) {
+                        printf("%d ", history[j]);
+                    }
                 }
-            }
 
-			piece_size = -1;  // we need to do that because if the input is not a number, scanf will not modify the variable
-			scanf("%u", &piece_size);
-			clear_buffer();
-			clear_screen();
+    			piece_size = -1;  // we need to do that because if the input is not a number, scanf will not modify the variable
+    			scanf("%u", &piece_size);
+    			clear_buffer();
+    			clear_screen();
 
-			response = place_piece(game, piece_size, *pcurrent_player, column); // != EMPTY because we force the choice of the column
-			
-			if (response == PARAM) {
-				disp_error("Cette taille de pion n'existe pas.");
-			}
-			if (response == FORBIDDEN) {
-				disp_error("Il ne vous reste plus de pion de cette taille-là.");
-			}
-			if (response == OK) {
-				history[column] = piece_size;			
-				column++;
-			}
-		}
-
-		*pcurrent_player = next_player(*pcurrent_player);
+    			response = place_piece(game, piece_size, *pcurrent_player, column); // != EMPTY because we force the choice of the column
+    			
+    			if (response == PARAM) {
+    				disp_error("Cette taille de pion n'existe pas.");
+    			}
+    			if (response == FORBIDDEN) {
+    				disp_error("Il ne vous reste plus de pion de cette taille-là.");
+    			}
+    			if (response == OK) {
+    				history[column] = piece_size;			
+    				column++;
+    			}
+    		}
+        }
+    	
+        *pcurrent_player = next_player(*pcurrent_player);
 	}
 }
 
@@ -261,18 +268,24 @@ void gameplay(board game, player *pcurrent_player) {
 	char history[100];  // a string to be printed
 	
 	while (get_winner(game) == NO_PLAYER) {
-		history[0] = '\0'; // history = ""
+        if (*pcurrent_player == BOT_P) {
+            bot_move(game, BOT_P);
+            *pcurrent_player = next_player(*pcurrent_player);
+            clear_screen();
+        } else {
+    		history[0] = '\0'; // history = ""
 
-        choose_piece_to_pick(game, pcurrent_player);
+            choose_piece_to_pick(game, pcurrent_player);
 
-		while (movement_left(game) != -1) {
-			input = ask_for_valid_input(game, history);
-			treat_input(game, history, input);
-		}
+    		while (movement_left(game) != -1) {
+    			input = ask_for_valid_input(game, history);
+    			treat_input(game, history, input);
+    		}
 
-		if (input != 'A') {
-			*pcurrent_player = next_player(*pcurrent_player);
-		}
+    		if (input != 'A') {
+    			*pcurrent_player = next_player(*pcurrent_player);
+    		}
+        }
 	}
 }
 
