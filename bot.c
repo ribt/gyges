@@ -224,7 +224,7 @@ bool i_am_blocked(board game, player bot) {
 
 // better choice than random -> try to approach the goal case
 direction random_direction(board game, player bot) {
-    if (rand()%4 > 0) { // 75% chance to move forward 
+    if (rand()%5 > 0) { // 4/5 = 80% chance to move forward 
         if (bot == NORTH_P) {
             if (is_move_possible(game, SOUTH)) {
                 return SOUTH;
@@ -235,17 +235,17 @@ direction random_direction(board game, player bot) {
         }
     }
 
-    if (rand()%5 > 0) { // 25%*80% = 20 %
-        if (rand()%2 == 0) { // 20%*50% = 10% to move EAST
+    if (rand()%10 > 0) { // (1-0.8)*9/10 = 18 %
+        if (rand()%2 == 0) { // 0.18*1/2 = 9% to move EAST
             if (is_move_possible(game, EAST)) {
                 return EAST;
             }
-        } else if (is_move_possible(game, WEST)) { // 10% to move WEST
+        } else if (is_move_possible(game, WEST)) { // 9% to move WEST
             return WEST;
         }
     }
 
-    if (bot == NORTH_P) { // 5% chance to move backward
+    if (bot == NORTH_P) { // 2% chance to move backward
         return NORTH;
     } else {
         return SOUTH;
