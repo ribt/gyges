@@ -19,8 +19,15 @@ debug: board.o display_debug.o game_debug.o bot.o
 display_debug.o: display.c board.h
 	gcc -Wall -D DEBUG -g -c display.c -o display_debug.o
 
+bot_debug.o: bot.c
+	gcc -Wall -D DEBUG -g -c bot.c -o bot_debug.o
+
 game_debug.o: game.c board.h display.h
 	gcc -Wall -D DEBUG -g -c game.c -o game_debug.o
+
+test: board.o display_debug.o bot_debug.o test.c
+	gcc -Wall -g board.o display_debug.o bot_debug.o test.c -o test
+
 
 clean:
 	rm -f *.o gyges gyges_debug

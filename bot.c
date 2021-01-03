@@ -6,8 +6,7 @@
 #include <time.h>
 
 #define MAX_PATH_LEN 100
-#define PAUSE_SEC 1
-#define DEBUG 0 
+#define PAUSE_MS 750
 
 typedef struct {
     int len;
@@ -189,12 +188,14 @@ move best_move_to_win(board game, player bot) {
 // execute and display a move
 void disp_move(board game, player bot, move move) {
     disp_board(game);
-    sleep(PAUSE_SEC);
+    #ifndef DEBUG
+        usleep(PAUSE_MS*1000);
+    #endif
     pick_piece(game, bot, move.piece.line, move.piece.column);
     for (int i = 0; i < move.path.len; i++) {
         clear_screen();
         disp_board(game);
-        sleep(PAUSE_SEC);
+        usleep(PAUSE_MS*1000);
         move_piece(game, move.path.directions[i]);
     }
 }
@@ -221,6 +222,36 @@ bool i_am_blocked(board game, player bot) {
     return true;
 }
 
+// better choice than random -> try to approach the goal case
+direction random_direction(board game, player bot) {
+    if (rand()%4 > 0) { // 75% chance to move forward 
+        if (bot == NORTH_P) {
+            if (is_move_possible(game, SOUTH)) {
+                return SOUTH;
+            }
+        }
+        else if (is_move_possible(game, NORTH)) {
+            return NORTH;
+        }
+    }
+
+    if (rand()%5 > 0) { // 25%*80% = 20 %
+        if (rand()%2 == 0) { // 20%*50% = 10% to move EAST
+            if (is_move_possible(game, EAST)) {
+                return EAST;
+            }
+        } else if (is_move_possible(game, WEST)) { // 10% to move WEST
+            return WEST;
+        }
+    }
+
+    if (bot == NORTH_P) { // 5% chance to move backward
+        return NORTH;
+    } else {
+        return SOUTH;
+    }
+}
+
 move random_move(board game, player bot) {
     move rep;
     return_code response;
@@ -233,7 +264,8 @@ move random_move(board game, player bot) {
     pick_piece(tmp_game, bot, rep.piece.line, rep.piece.column);
 
     while (movement_left(tmp_game) > -1) {
-        rand_dir = rand()%4+1;       // GOAL, SOUTH, NORTH, EAST, WEST
+        rand_dir = random_direction(tmp_game, bot);
+        printf("rand_dir: %s\n", dir_string(rand_dir));
         response = move_piece(tmp_game, rand_dir);
         if (i_am_blocked(tmp_game, bot) || rep.path.len == MAX_PATH_LEN) {
             cancel_movement(tmp_game);
