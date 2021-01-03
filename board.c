@@ -26,6 +26,7 @@ void set_map(board game, int map[DIMENSION][DIMENSION]) {
     }
 }
 
+
 // internal functions :
 
 bool are_coordinates_valid(int line, int column) {
