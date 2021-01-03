@@ -1,7 +1,5 @@
 #include <stdlib.h>
 #include "board.h"
-#include <stdio.h>
-#include <unistd.h>
 
 #define MAX_HISTORY_SIZE 100
 
@@ -27,31 +25,6 @@ void set_map(board game, int map[DIMENSION][DIMENSION]) {
         }
     }
 }
-
-int get_history_len(board game) {
-    return game->history_len;
-}
-
-void disp_history(board game) {
-    printf("\033[H\033[2J");
-    for (int i = 0; i < game->history_len; i++) {
-        for (int l = DIMENSION-1; l >= 0; l--) {
-            for (int c = 0; c < DIMENSION; c++) {
-                if (l==game->positions_history[i][0] && c==game->positions_history[i][1]) {
-                    printf("* ");
-                } else {
-                    printf("%d ", get_piece_size(game, l, c));
-                }
-            }
-            printf("\n");
-        }
-
-        sleep(1);
-        printf("\033[H\033[2J");
-    }
-}
-
-
 
 // internal functions :
 
