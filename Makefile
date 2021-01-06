@@ -28,6 +28,9 @@ game_debug.o: game.c board.h display.h
 test: board.o display_debug.o bot_debug.o test.c
 	gcc -Wall -g board.o display_debug.o bot_debug.o test.c -o test
 
+bvb: board.o display_debug.o bot_debug.o bot-versus-bot.c
+	gcc -Wall -g board.o display_debug.o bot_debug.o bot-versus-bot.c -o bvb
+
 
 clean:
 	rm -f *.o gyges gyges_debug

@@ -8,6 +8,8 @@
 #define MAX_PATH_LEN 100
 #define PAUSE_MS 750
 
+int max_path = 0;
+
 typedef struct {
     int len;
     direction directions[MAX_PATH_LEN];
@@ -290,6 +292,11 @@ path path_avoiding_enemy_to_win(board game, path current_path, player ennemy) {
     board tmp_game;
     path next_path;
     path ret_path;
+
+    if (current_path.len > max_path) {
+        max_path = current_path.len;
+        printf("new max : %d\n", max_path);
+    }
     
     if (movement_left(game) == -1 && !can_win(game, ennemy)) {
         return current_path;
