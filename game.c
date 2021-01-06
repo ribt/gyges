@@ -6,7 +6,7 @@
 #include "display.h"
 #include "bot.h"
 
-player BOT_P = NORTH_P;
+player BOT_P = NO_PLAYER;
 
 // This one allows us to empty stdin buffer.
 void clear_buffer() {
@@ -269,6 +269,7 @@ void gameplay(board game, player *pcurrent_player) {
 	
 	while (get_winner(game) == NO_PLAYER) {
         if (*pcurrent_player == BOT_P) {
+            printf("Le bot réfléchit...\n");
             bot_move(game, BOT_P);
             *pcurrent_player = next_player(*pcurrent_player);
             clear_screen();
@@ -306,12 +307,31 @@ void victory_message(player winner) {
     };
 }
 
+void configure_bot() {
+    char entree;
+    printf("Entrez R pour jouer contre un robot et C pour jouer à deux joueurs sur le même clavier : ");
+    scanf("%c", &entree);
+    clear_buffer();
+    capitalize(&entree);
+    if (entree == 'R') {
+        BOT_P = NORTH_P;
+        printf("\n\033[1;31mVous êtes le joueur %s\033[1;31m et le robot jouera pour le joueur %s\033[1;31m.\033[0m\n", player_name(next_player(BOT_P)), player_name(BOT_P));
+    } else if (entree == 'C') {
+        BOT_P = NO_PLAYER;
+    } else {
+        printf("Entrée invalide.\n\n");
+        configure_bot();
+    }
+}
+
 int main() {
 	player current_player;
 	board game = new_game();
 
     srand(time(NULL));
     clear_screen();
+
+    configure_bot();
 
 	#ifdef DEBUG
 	   init_game_debug(game, &current_player);	
