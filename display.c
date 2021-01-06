@@ -52,11 +52,15 @@ void disp_board(board game) {
             }
 
             if (line == picked_piece_line(game) && column == picked_piece_column(game)) { // print the picked piece
+                printf("\033[1;"); // bold
+                #ifndef DEBUG
+                    printf("5;"); // blinking
+                #endif
                 switch (picked_piece_size(game)) {
                     case NONE: break; // never happens but it avoids a warning
-                    case ONE: printf("\033[5;1;34m1"); break;   // blue and bold and blink
-                    case TWO: printf("\033[5;1;33m2"); break;   // yellow and bold and blink
-                    case THREE: printf("\033[5;1;31m3"); break; // red and bold and blink
+                    case ONE: printf("34m1"); break;   // blue
+                    case TWO: printf("33m2"); break;   // yellow
+                    case THREE: printf("31m3"); break; // red
                 }
             } else {
                 printf(" "); // complete the cell to be 3 chars long if there is no picked piece

@@ -17,6 +17,16 @@ struct board_s {
 };
 
 
+// for the bot
+void set_map(board game, int map[DIMENSION][DIMENSION]) {
+    for (int line = 0; line < DIMENSION; line++) {
+        for (int column = 0; column < DIMENSION; column++) {
+            game->map[column][line] = map[column][line];
+        }
+    }
+}
+
+
 // internal functions :
 
 bool are_coordinates_valid(int line, int column) {

@@ -4,6 +4,9 @@
 #include <string.h>
 #include "board.h"
 #include "display.h"
+#include "bot.h"
+
+player BOT_P = NO_PLAYER;
 
 // This one allows us to empty stdin buffer.
 void clear_buffer() {
@@ -40,41 +43,45 @@ void init_game(board game, player *pcurrent_player) {
 	}
 
 	for (int i = 0; i < NB_PLAYERS; i++) {	// do the same for all players (i is never used)
-		for (int j = 0; j < DIMENSION; j++) { // fill history with NONE size
-			history[j] = NONE;
-		}
+        if (*pcurrent_player == BOT_P) {
+            random_piece_placement(game, BOT_P);
+        } else {
+    		for (int j = 0; j < DIMENSION; j++) { // fill history with NONE size
+    			history[j] = NONE;
+    		}
 
-		column = 0;
-		while (column < DIMENSION) {  // place the pieces column by column
-            disp_board(game);
-            printf("Joueur %s, veuillez choisir de gauche à droite la taille des pièces à mettre sur votre première ligne.\nValidez avec Entrée pour chaque pièce.\n> ", player_name(*pcurrent_player));
+    		column = 0;
+    		while (column < DIMENSION) {  // place the pieces column by column
+                disp_board(game);
+                printf("Joueur %s, veuillez choisir de gauche à droite la taille des pièces à mettre sur votre première ligne.\nValidez avec Entrée pour chaque pièce.\n> ", player_name(*pcurrent_player));
 
-            for (int j = 0; j < DIMENSION; j++) {  // display all the pieces already placed
-                if (history[j] != NONE) {
-                    printf("%d ", history[j]);
+                for (int j = 0; j < DIMENSION; j++) {  // display all the pieces already placed
+                    if (history[j] != NONE) {
+                        printf("%d ", history[j]);
+                    }
                 }
-            }
 
-			piece_size = -1;  // we need to do that because if the input is not a number, scanf will not modify the variable
-			scanf("%u", &piece_size);
-			clear_buffer();
-			clear_screen();
+    			piece_size = -1;  // we need to do that because if the input is not a number, scanf will not modify the variable
+    			scanf("%u", &piece_size);
+    			clear_buffer();
+    			clear_screen();
 
-			response = place_piece(game, piece_size, *pcurrent_player, column); // != EMPTY because we force the choice of the column
-			
-			if (response == PARAM) {
-				disp_error("Cette taille de pion n'existe pas.");
-			}
-			if (response == FORBIDDEN) {
-				disp_error("Il ne vous reste plus de pion de cette taille-là.");
-			}
-			if (response == OK) {
-				history[column] = piece_size;			
-				column++;
-			}
-		}
-
-		*pcurrent_player = next_player(*pcurrent_player);
+    			response = place_piece(game, piece_size, *pcurrent_player, column); // != EMPTY because we force the choice of the column
+    			
+    			if (response == PARAM) {
+    				disp_error("Cette taille de pion n'existe pas.");
+    			}
+    			if (response == FORBIDDEN) {
+    				disp_error("Il ne vous reste plus de pion de cette taille-là.");
+    			}
+    			if (response == OK) {
+    				history[column] = piece_size;			
+    				column++;
+    			}
+    		}
+        }
+    	
+        *pcurrent_player = next_player(*pcurrent_player);
 	}
 }
 
@@ -261,36 +268,79 @@ void gameplay(board game, player *pcurrent_player) {
 	char history[100];  // a string to be printed
 	
 	while (get_winner(game) == NO_PLAYER) {
-		history[0] = '\0'; // history = ""
+        if (*pcurrent_player == BOT_P) {
+            printf("Le bot réfléchit...\n");
+            bot_move(game, BOT_P);
+            *pcurrent_player = next_player(*pcurrent_player);
+            clear_screen();
+        } else {
+    		history[0] = '\0'; // history = ""
 
-        choose_piece_to_pick(game, pcurrent_player);
+            choose_piece_to_pick(game, pcurrent_player);
 
-		while (movement_left(game) != -1) {
-			input = ask_for_valid_input(game, history);
-			treat_input(game, history, input);
-		}
+    		while (movement_left(game) != -1) {
+    			input = ask_for_valid_input(game, history);
+    			treat_input(game, history, input);
+    		}
 
-		if (input != 'A') {
-			*pcurrent_player = next_player(*pcurrent_player);
-		}
+    		if (input != 'A') {
+    			*pcurrent_player = next_player(*pcurrent_player);
+    		}
+        }
 	}
 }
 
 void victory_message(player winner) {
-    printf("Félicitation joueur %s pour cette victoire", player_name(winner));
-    
-    switch (rand()%10) {
-        case 0 : printf(" ! Ce fût une belle partie.\n"); break;
-        case 1 : printf(" ! C'est mérité.\n"); break;
-        case 2 : printf(". J'aurais pas fait ça mais c'est passé, je suppose que c'est bien joué quand même.\n"); break;
-        case 3 : printf("\nGG ez.\n"); break;
-        case 4 : printf(". Maintenant on joue à un vrai jeu ? Horde ou Alliance ?\n"); break;
-        case 5 : printf(" ! Belle connaissance de la méta, solide sur les placements et mental d'acier.\n"); break;
-        case 6 : printf(". Outplay tout simplement.\n"); break;
-        case 7 : printf(". Faut se réveiller joueur %s, c'est votre petit fère qui joue ?\n", player_name(next_player(winner))); break;
-        case 8 : printf(" ! Il y a eu du beau jeu des deux côtés, c'était intéressant.\n"); break;
-        case 9 : printf(". Small question to the loser : Do you really speak French? I have the feeling that you don't understand the rules...\n"); break;
-    };
+    if (BOT_P == NO_PLAYER) {
+        printf("Félicitation joueur %s pour cette victoire", player_name(winner));
+        
+        switch (rand()%10) {
+            case 0 : printf(" ! Ce fût une belle partie.\n"); break;
+            case 1 : printf(" ! C'est mérité.\n"); break;
+            case 2 : printf(". J'aurais pas fait ça mais c'est passé, je suppose que c'est bien joué quand même.\n"); break;
+            case 3 : printf("\nGG ez.\n"); break;
+            case 4 : printf(". Maintenant on joue à un vrai jeu ? Horde ou Alliance ?\n"); break;
+            case 5 : printf(" ! Belle connaissance de la méta, solide sur les placements et mental d'acier.\n"); break;
+            case 6 : printf(". Outplay tout simplement.\n"); break;
+            case 7 : printf(". Faut se réveiller joueur %s, c'est votre petit fère qui joue ?\n", player_name(next_player(winner))); break;
+            case 8 : printf(" ! Il y a eu du beau jeu des deux côtés, c'était intéressant.\n"); break;
+            case 9 : printf(". Small question to the loser : Do you really speak French? I have the feeling that you don't understand the rules...\n"); break;
+        };
+    } else {
+        if (winner == BOT_P) {
+            printf("Victoire du robot !\n");
+        } else {
+            printf("Bien joué humain !\n");
+        }
+    }
+}
+
+void configure_bot() {
+    char entree = 0;
+
+    while (entree != 'R' && entree != 'C') {
+        if (entree > 0) {
+            printf("Entrée invalide.\n\n");
+        }
+        printf("Entrez R pour jouer contre un robot et C pour jouer à deux joueurs sur le même clavier : ");
+        scanf("%c", &entree);
+        clear_buffer();
+        capitalize(&entree);
+    }
+
+
+    if (entree == 'R') {
+        BOT_P = NORTH_P;
+        while (entree < '1' || entree > '3') {
+            printf("Choisissez la puissance du bot (entre 1 et 3) : ");
+            scanf("%c", &entree);
+            clear_buffer();
+        }
+        set_difficulty(entree-'1');
+        printf("\n\033[1;31mVous êtes le joueur %s\033[1;31m et le robot jouera pour le joueur %s\033[1;31m.\033[0m\n", player_name(next_player(BOT_P)), player_name(BOT_P));
+    } else {
+        BOT_P = NO_PLAYER;
+    }
 }
 
 int main() {
@@ -299,6 +349,8 @@ int main() {
 
     srand(time(NULL));
     clear_screen();
+
+    configure_bot();
 
 	#ifdef DEBUG
 	   init_game_debug(game, &current_player);	

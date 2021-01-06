@@ -20,5 +20,5 @@ $ ./gyges
 tout simplement ;)
 
 ## TO DO
-- [ ] Ajouter un bot pour jouer en solo.
+- [x] Ajouter un bot pour jouer en solo.
 - [ ] Ajouter un mode multijoueur en LAN.
