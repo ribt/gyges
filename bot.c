@@ -15,6 +15,8 @@
     #define trace(s)
 #endif
 
+typedef enum {EASY, MEDIUM, HARD} level;
+level difficulty = HARD;
 
 typedef struct {
     int len;
@@ -35,6 +37,17 @@ typedef struct {
     position piece;
     path path;
 } move;
+
+void set_difficulty(level choice) {
+    switch(choice) {
+        case EASY: printf("Niveau : facile\n"); break;
+        case MEDIUM: printf("Niveau : moyen\n"); break;
+        case HARD: printf("Niveau : dur\n"); break;
+        default: return;
+    }
+
+    difficulty = choice;
+}
 
 
 void copy_path(path *src, path *dst) {
@@ -351,9 +364,9 @@ move move_avoiding_enemy_to_win(board game, player bot) {
 }
 
 void bot_move(board game, player bot) {
-    if (can_win(game, bot)) {
+    if (can_win(game, bot) && (difficulty > EASY || rand()%2)) {
         disp_move(game, bot, best_move_to_win(game, bot));
-    } else if (can_win(game, next_player(bot))) {
+    } else if (can_win(game, next_player(bot)) && rand()%2 < difficulty) {
         disp_move(game, bot, move_avoiding_enemy_to_win(game, bot));
     } else {
         disp_move(game, bot, random_move(game, bot, 0));

@@ -291,36 +291,55 @@ void gameplay(board game, player *pcurrent_player) {
 }
 
 void victory_message(player winner) {
-    printf("Félicitation joueur %s pour cette victoire", player_name(winner));
-    
-    switch (rand()%10) {
-        case 0 : printf(" ! Ce fût une belle partie.\n"); break;
-        case 1 : printf(" ! C'est mérité.\n"); break;
-        case 2 : printf(". J'aurais pas fait ça mais c'est passé, je suppose que c'est bien joué quand même.\n"); break;
-        case 3 : printf("\nGG ez.\n"); break;
-        case 4 : printf(". Maintenant on joue à un vrai jeu ? Horde ou Alliance ?\n"); break;
-        case 5 : printf(" ! Belle connaissance de la méta, solide sur les placements et mental d'acier.\n"); break;
-        case 6 : printf(". Outplay tout simplement.\n"); break;
-        case 7 : printf(". Faut se réveiller joueur %s, c'est votre petit fère qui joue ?\n", player_name(next_player(winner))); break;
-        case 8 : printf(" ! Il y a eu du beau jeu des deux côtés, c'était intéressant.\n"); break;
-        case 9 : printf(". Small question to the loser : Do you really speak French? I have the feeling that you don't understand the rules...\n"); break;
-    };
+    if (BOT_P == NO_PLAYER) {
+        printf("Félicitation joueur %s pour cette victoire", player_name(winner));
+        
+        switch (rand()%10) {
+            case 0 : printf(" ! Ce fût une belle partie.\n"); break;
+            case 1 : printf(" ! C'est mérité.\n"); break;
+            case 2 : printf(". J'aurais pas fait ça mais c'est passé, je suppose que c'est bien joué quand même.\n"); break;
+            case 3 : printf("\nGG ez.\n"); break;
+            case 4 : printf(". Maintenant on joue à un vrai jeu ? Horde ou Alliance ?\n"); break;
+            case 5 : printf(" ! Belle connaissance de la méta, solide sur les placements et mental d'acier.\n"); break;
+            case 6 : printf(". Outplay tout simplement.\n"); break;
+            case 7 : printf(". Faut se réveiller joueur %s, c'est votre petit fère qui joue ?\n", player_name(next_player(winner))); break;
+            case 8 : printf(" ! Il y a eu du beau jeu des deux côtés, c'était intéressant.\n"); break;
+            case 9 : printf(". Small question to the loser : Do you really speak French? I have the feeling that you don't understand the rules...\n"); break;
+        };
+    } else {
+        if (winner == BOT_P) {
+            printf("Victoire du robot !\n");
+        } else {
+            printf("Bien joué humain !\n");
+        }
+    }
 }
 
 void configure_bot() {
-    char entree;
-    printf("Entrez R pour jouer contre un robot et C pour jouer à deux joueurs sur le même clavier : ");
-    scanf("%c", &entree);
-    clear_buffer();
-    capitalize(&entree);
+    char entree = 0;
+
+    while (entree != 'R' && entree != 'C') {
+        if (entree > 0) {
+            printf("Entrée invalide.\n\n");
+        }
+        printf("Entrez R pour jouer contre un robot et C pour jouer à deux joueurs sur le même clavier : ");
+        scanf("%c", &entree);
+        clear_buffer();
+        capitalize(&entree);
+    }
+
+
     if (entree == 'R') {
         BOT_P = NORTH_P;
+        while (entree < '1' || entree > '3') {
+            printf("Choisissez la puissance du bot (entre 1 et 3) : ");
+            scanf("%c", &entree);
+            clear_buffer();
+        }
+        set_difficulty(entree-'1');
         printf("\n\033[1;31mVous êtes le joueur %s\033[1;31m et le robot jouera pour le joueur %s\033[1;31m.\033[0m\n", player_name(next_player(BOT_P)), player_name(BOT_P));
-    } else if (entree == 'C') {
-        BOT_P = NO_PLAYER;
     } else {
-        printf("Entrée invalide.\n\n");
-        configure_bot();
+        BOT_P = NO_PLAYER;
     }
 }
 
