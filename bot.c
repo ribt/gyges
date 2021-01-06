@@ -16,8 +16,6 @@
 #endif
 
 
-int max_path = 0;
-
 typedef struct {
     int len;
     direction directions[MAX_PATH_LEN];
@@ -73,18 +71,6 @@ int *pickable_pieces(board game, player bot) {
 
     rep[0] = i-1;
     return rep;
-}
-
-char *dir_string(direction dir) {
-    switch (dir) {
-        case SOUTH: return "SOUTH";
-        case NORTH: return "NORTH";
-        case EAST: return "EAST";
-        case WEST: return "WEST";
-        case GOAL: return "GOAL";
-    }
-
-    return "";
 }
 
 void random_piece_placement(board game, player bot) {
