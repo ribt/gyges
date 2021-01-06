@@ -33,4 +33,4 @@ bvb: board.o display_debug.o bot_debug.o bot-versus-bot.c
 
 
 clean:
-	rm -f *.o gyges gyges_debug
+	rm -f *.o gyges gyges_debug bvb test

@@ -21,7 +21,7 @@ int main() {
     while (get_winner(game) == NO_PLAYER) {
         clear_screen();
         disp_board(game);
-        sleep(1);
+        usleep(750*1000);
         clear_screen();
         bot_move(game, current_player);
         current_player = next_player(current_player);
