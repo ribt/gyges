@@ -154,33 +154,38 @@ direction random_direction(board game, player bot) {
     }
 }
 
+bool can_win(board game, player testing_player);
+
 move random_move(board game, player bot) {
-    move rep;
-    return_code response;
+    move response;
+    return_code ret_code;
     direction rand_dir;
     board tmp_game = copy_game(game);
 
-    rep.path.len = 0;
+    response.path.len = 0;
 
-    rep.piece = random_pickable_piece(tmp_game, bot);
-    pick_piece(tmp_game, bot, rep.piece.line, rep.piece.column);
+    response.piece = random_pickable_piece(tmp_game, bot);
+    pick_piece(tmp_game, bot, response.piece.line, response.piece.column);
 
     while (movement_left(tmp_game) > -1) {
         rand_dir = random_direction(tmp_game, bot);
-        printf("rand_dir: %s\n", dir_string(rand_dir));
-        response = move_piece(tmp_game, rand_dir);
-        if (i_am_blocked(tmp_game, bot) || rep.path.len == MAX_PATH_LEN) {
+        ret_code = move_piece(tmp_game, rand_dir);
+        if (i_am_blocked(tmp_game, bot) || response.path.len == MAX_PATH_LEN) {
             cancel_movement(tmp_game);
-            rep.path.len = 0;
-            rep.piece = random_pickable_piece(tmp_game, bot);
-            pick_piece(tmp_game, bot, rep.piece.line, rep.piece.column);
-        } else if (response == OK) {
-            rep.path.directions[rep.path.len] = rand_dir;
-            rep.path.len++;                
+            response.path.len = 0;
+            response.piece = random_pickable_piece(tmp_game, bot);
+            pick_piece(tmp_game, bot, response.piece.line, response.piece.column);
+        } else if (ret_code == OK) {
+            response.path.directions[response.path.len] = rand_dir;
+            response.path.len++;                
         }
     }
+    if (can_win(tmp_game, next_player(bot))) {
+        destroy_game(tmp_game);
+        return random_move(game, bot);
+    }
     destroy_game(tmp_game);
-    return rep;
+    return response;
 }
 
 bool try_to_win(board game) {
