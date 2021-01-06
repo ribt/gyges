@@ -7,6 +7,14 @@
 
 #define MAX_PATH_LEN 100
 #define PAUSE_MS 750
+#define MAX_RANDOM_TRIES 10
+
+#ifdef DEBUG
+    #define trace(s) printf(s); usleep(100000);
+#else
+    #define trace(s)
+#endif
+
 
 int max_path = 0;
 
@@ -37,7 +45,6 @@ void copy_path(path *src, path *dst) {
         dst->directions[i] = src->directions[i];
     }
 }
-
 
 int player_line(board game, player bot) {
     if (bot == NORTH_P) {
@@ -91,10 +98,11 @@ void random_piece_placement(board game, player bot) {
 
 // execute and display a move
 void disp_move(board game, player bot, move move) {
-    disp_board(game);
-    #ifndef DEBUG
-        usleep(PAUSE_MS*1000);
+    #ifdef DEBUG
+        clear_screen();
     #endif
+    disp_board(game);
+    usleep(PAUSE_MS*1000);
     pick_piece(game, bot, move.piece.line, move.piece.column);
     for (int i = 0; i < move.path.len; i++) {
         clear_screen();
@@ -102,6 +110,8 @@ void disp_move(board game, player bot, move move) {
         usleep(PAUSE_MS*1000);
         move_piece(game, move.path.directions[i]);
     }
+    clear_screen();
+    disp_board(game);
 }
 
 position random_pickable_piece(board game, player bot) {
@@ -158,11 +168,13 @@ direction random_direction(board game, player bot) {
 
 bool can_win(board game, player testing_player);
 
-move random_move(board game, player bot) {
+move random_move(board game, player bot, int tries) {
     move response;
     return_code ret_code;
     direction rand_dir;
     board tmp_game = copy_game(game);
+
+    trace("randome_move\n")
 
     response.path.len = 0;
 
@@ -182,9 +194,9 @@ move random_move(board game, player bot) {
             response.path.len++;                
         }
     }
-    if (can_win(tmp_game, next_player(bot))) {
+    if (can_win(tmp_game, next_player(bot)) && tries < MAX_RANDOM_TRIES) {
         destroy_game(tmp_game);
-        return random_move(game, bot);
+        return random_move(game, bot, tries+1);
     }
     destroy_game(tmp_game);
     return response;
@@ -215,6 +227,8 @@ bool can_win(board game, player testing_player) {
     int i = 1;
     int *playable_columns = pickable_pieces(game, testing_player);
     board tmp_game;
+
+    trace("can_win\n")
 
     while (i <= playable_columns[0]) {
         tmp_game = copy_game(game);
@@ -293,25 +307,20 @@ path path_avoiding_enemy_to_win(board game, path current_path, player ennemy) {
     path next_path;
     path ret_path;
 
-    if (current_path.len > max_path) {
-        max_path = current_path.len;
-        printf("new max : %d\n", max_path);
-    }
-    
-    if (movement_left(game) == -1 && !can_win(game, ennemy)) {
-        return current_path;
-    }
+    trace("path_avoiding_enemy_to_win\n")
 
     for (direction dir = SOUTH; dir <= WEST; dir++) { // GOAL, SOUTH, NORTH, EAST, WEST
         if (is_move_possible(game, dir)) {
             tmp_game = copy_game(game);
             move_piece(tmp_game, dir);
-            if (movement_left(game) == -1 && !can_win(game, ennemy)) {
-                current_path.directions[current_path.len] = dir;
-                current_path.len++;
-                destroy_game(game);
-                return current_path;
-            } else if (movement_left(game) >= 0) {
+            if (movement_left(tmp_game) == -1) {
+                if (!can_win(tmp_game, ennemy)) {
+                    current_path.directions[current_path.len] = dir;
+                    current_path.len++;
+                    destroy_game(tmp_game);
+                    return current_path;
+                }
+            } else {
                 copy_path(&current_path, &next_path);
                 next_path.directions[current_path.len] = dir;
                 next_path.len++;
@@ -352,7 +361,7 @@ move move_avoiding_enemy_to_win(board game, player bot) {
         i++;
     }
 
-    return random_move(game, bot);
+    return random_move(game, bot, MAX_RANDOM_TRIES);
 }
 
 void bot_move(board game, player bot) {
@@ -361,7 +370,7 @@ void bot_move(board game, player bot) {
     } else if (can_win(game, next_player(bot))) {
         disp_move(game, bot, move_avoiding_enemy_to_win(game, bot));
     } else {
-        disp_move(game, bot, random_move(game, bot));
+        disp_move(game, bot, random_move(game, bot, 0));
     }
     
 }

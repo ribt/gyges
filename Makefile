@@ -13,8 +13,8 @@ display.o: display.c board.h
 bot.o: bot.c bot.h
 	gcc -Wall -c bot.c
 
-debug: board.o display_debug.o game_debug.o bot.o
-	gcc -Wall -g board.o display_debug.o game_debug.o bot.o -o gyges_debug
+debug: board.o display_debug.o game_debug.o bot_debug.o
+	gcc -Wall -g board.o display_debug.o game_debug.o bot_debug.o -o gyges_debug
 
 display_debug.o: display.c board.h
 	gcc -Wall -D DEBUG -g -c display.c -o display_debug.o
