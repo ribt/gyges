@@ -29,7 +29,7 @@ typedef struct {
 
 bool quit = false;
 image commands[6]; // 5 directions + cancel
-SDL_Texture * pieces[3];
+SDL_Texture * pieces[6]; // 3 sizes * 2 (normal and picked style)
 
 void init_commands(SDL_Renderer *renderer) {
     commands[GOAL].texture = IMG_LoadTexture(renderer, "assets/win.png");
@@ -66,13 +66,13 @@ void init_pieces(SDL_Renderer *renderer) {
     SDL_Surface * surface;
     TTF_Font * font;
     SDL_Color black = {0, 0, 0};
-    char txt[2] = "1";
+    char txt[2] = "a"; // txt[1] = 0
 
     font = TTF_OpenFont("assets/joystick.ttf", 55);
     if (!font) {fprintf(stderr, "TTF_OpenFont: %s\n", TTF_GetError());}
 
-    for (int i = 1; i <= 3; i++) {
-        txt[0] = '0'+i;
+    for (int i = 0; i < 3; i++) {
+        txt[0] = '1'+i;
         surface = TTF_RenderText_Solid(font, txt, black);
         pieces[i] = SDL_CreateTextureFromSurface(renderer, surface);
     }
@@ -111,13 +111,15 @@ void onclick(int x, int y) {
     }
 }
 
-void display_flip(SDL_Renderer *renderer, board game) {
-    size piece_size;
-    SDL_Rect rect;
-
+void clear_screen(SDL_Renderer *renderer) {
     /* background in gray */
     SDL_SetRenderDrawColor(renderer, 160, 160, 160, 255); 
     SDL_RenderClear(renderer);
+}
+
+void disp_board(SDL_Renderer *renderer, board game) {
+    size piece_size;
+    SDL_Rect rect;
 
     /* draw black lines to make te board */
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
@@ -126,26 +128,32 @@ void display_flip(SDL_Renderer *renderer, board game) {
         SDL_RenderDrawLine(renderer, MARGIN_X+i*CELL_SIZE, MARGIN_Y, MARGIN_X+i*CELL_SIZE, MARGIN_Y+DIMENSION*CELL_SIZE);
     }
 
-    /* display the commands */
-    for (direction i = GOAL; i <= WEST+1; i++) {
-        SDL_RenderCopy(renderer, commands[i].texture, NULL, &commands[i].rect);
-    }
-
     for (int line = 0; line < DIMENSION; line++) {
         for (int column = 0; column < DIMENSION; column++) {
             piece_size = get_piece_size(game, line, column);
-            if (piece_size > 0) {
-                SDL_QueryTexture(pieces[piece_size], NULL, NULL, &rect.w, &rect.h);
+            if (line == picked_piece_line(game) && column == picked_piece_column(game)) {
+                piece_size = picked_piece_size(game);
+            }
+            if (piece_size > NONE) {
+                SDL_QueryTexture(pieces[piece_size-1], NULL, NULL, &rect.w, &rect.h);
                 rect.x = MARGIN_X + CELL_SIZE*column + 10;
                 rect.y = MARGIN_Y + CELL_SIZE*(DIMENSION-1 - line);
-                SDL_RenderCopy(renderer, pieces[piece_size], NULL, &rect);
+                SDL_RenderCopy(renderer, pieces[piece_size-1], NULL, &rect);
 
             }
         }
     }
+}
 
-    SDL_RenderPresent(renderer);
-    SDL_Delay(1);
+void disp_commands(SDL_Renderer *renderer, board game) {
+    for (direction dir = GOAL; dir <= WEST; dir++) {
+        if (is_move_possible(game, dir)) {
+            SDL_RenderCopy(renderer, commands[dir].texture, NULL, &commands[dir].rect);
+        }
+    }
+    if (picked_piece_size(game) != NONE) {
+        SDL_RenderCopy(renderer, commands[5].texture, NULL, &commands[5].rect); // cancel
+    }
 }
 
 void init_sdl(SDL_Window **pscreen, SDL_Renderer **prenderer) {
@@ -204,13 +212,63 @@ void choose_piece_to_pick(board game, player player) {
     }
 }
 
+void wait_for_move(board game) {
+    SDL_Event event;
+    direction clicked;
+
+    while (true) {
+        SDL_WaitEvent(&event);
+        while (event.type != SDL_QUIT && (event.type != SDL_MOUSEBUTTONUP || event.button.button != 1)) {
+            SDL_WaitEvent(&event);
+        }
+        if (event.type == SDL_QUIT) {
+            quit = true;
+            return;
+        }
+        clicked = direction_clicked(event.button.x, event.button.y);
+        if (move_piece(game, clicked) == OK) {
+            return;
+        }
+    }
+}
+
+void disp_message(char *text, TTF_Font *font, SDL_Renderer *renderer) {
+    SDL_Surface *surface;
+    SDL_Texture *texture;
+    SDL_Rect rect;
+    SDL_Color black = {0, 0, 0};
+
+    surface = TTF_RenderUTF8_Solid(font, text, black);
+    texture = SDL_CreateTextureFromSurface(renderer, surface);
+
+    SDL_QueryTexture(texture, NULL, NULL, &rect.w, &rect.h);
+    rect.x = SCREEN_W/2 - rect.w/2;
+    rect.y = 50;
+    SDL_RenderCopy(renderer, texture, NULL, &rect);
+}
+
+char * player_name(player this_player) {
+    if (this_player == SOUTH_P) {
+        return "SUD";
+    }
+    if (this_player == NORTH_P) {
+        return "NORD";
+    }
+    return "inconnu";
+}
+
 int main() {
     SDL_Window *screen;
     SDL_Renderer *renderer;
+    TTF_Font *font;
     player current_player;
     board game = new_game();
+    char message[100];
 
     init_sdl(&screen, &renderer);
+
+    font = TTF_OpenFont("assets/ubuntu.ttf", 30);
+    if (!font) {fprintf(stderr, "TTF_OpenFont: %s\n", TTF_GetError());}
 
     place_piece(game, ONE, SOUTH_P, 0);
     place_piece(game, THREE, SOUTH_P, 1);
@@ -226,12 +284,25 @@ int main() {
     place_piece(game, THREE, NORTH_P, 4);
     place_piece(game, THREE, NORTH_P, 5);
 
-    current_player = SOUTH_P;
+    current_player = NORTH_P;
 
     while (!quit) {
-        display_flip(renderer, game);
-        choose_piece_to_pick(game, current_player);
-        current_player = next_player(current_player);
+        clear_screen(renderer);
+        if (movement_left(game) == -1) {
+            current_player = next_player(current_player);
+            sprintf(message, "Joueur %s, à ton tour !", player_name(current_player));
+            disp_message(message, font, renderer);
+        }
+
+        disp_board(renderer, game);
+        disp_commands(renderer, game);
+        SDL_RenderPresent(renderer);
+
+        if (movement_left(game) == -1) {
+            choose_piece_to_pick(game, current_player);
+        } else {
+            wait_for_move(game);
+        }
     }
     
 
