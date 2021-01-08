@@ -7,6 +7,7 @@
 #include "bot.h"
 
 player BOT_P = NO_PLAYER;
+bool SWAP_ALLOWED = true;
 
 // This one allows us to empty stdin buffer.
 void clear_buffer() {
@@ -148,7 +149,7 @@ char ask_for_valid_input(board game, char *history) {
     while (!input_is_correct) {
         disp_board(game);
 
-        if (nbr_available_movments == 0) {
+        if (nbr_available_movments == 0 && SWAP_ALLOWED) {
             size_under_picked_piece = get_piece_size(game, picked_piece_line(game), picked_piece_column(game));
             printf("Vous êtes sur une pièce de taille %d. Vous avez le choix entre :\n", size_under_picked_piece);
             printf("- rebondir de %d case%s : entrez de nouveaux points cardinaux pour vous déplacer\n", size_under_picked_piece, plural(size_under_picked_piece));
@@ -156,6 +157,10 @@ char ask_for_valid_input(board game, char *history) {
 
         } else {
             printf("Déplacez-vous en entrant des points cardinaux (N, S, E, O).\nSi vous êtes sur la dernière ligne, faites G pour gagner.\nFaites A pour annuler votre dernier coup.\n(Les minuscules sont acceptées.)\n\n");
+            if (nbr_available_movments == 0) {
+                nbr_available_movments = get_piece_size(game, picked_piece_line(game), picked_piece_column(game));
+                agreement = plural(nbr_available_movments);
+            }
             printf("%d mouvement%s restant%s\n> ", nbr_available_movments, agreement, agreement);
         }
 
@@ -166,7 +171,7 @@ char ask_for_valid_input(board game, char *history) {
         clear_screen();
 
         if (input == 'P') {
-            if (nbr_available_movments == 0) {
+            if (SWAP_ALLOWED && nbr_available_movments == 0) {
                 input_is_correct = 1;                
             } else {
                 disp_error("Cette direction n'existe pas.");                
@@ -315,7 +320,7 @@ void victory_message(player winner) {
     }
 }
 
-void configure_bot() {
+void configuration() {
     char entree = 0;
 
     while (entree != 'R' && entree != 'C') {
@@ -331,15 +336,28 @@ void configure_bot() {
 
     if (entree == 'R') {
         BOT_P = NORTH_P;
+        SWAP_ALLOWED = false;
         while (entree < '1' || entree > '3') {
             printf("Choisissez la puissance du bot (entre 1 et 3) : ");
             scanf("%c", &entree);
             clear_buffer();
         }
         set_difficulty(entree-'1');
+        printf("\nLe bot ne sais pas utiliser le swap alors il ne vous sera pas possible d'utiliser ce mode de jeu face à lui.\n");
         printf("\n\033[1;31mVous êtes le joueur %s\033[1;31m et le robot jouera pour le joueur %s\033[1;31m.\033[0m\n", player_name(next_player(BOT_P)), player_name(BOT_P));
     } else {
         BOT_P = NO_PLAYER;
+        while (entree != 'O' && entree != 'N') {
+            printf("Voulez-vous jouer avec la règle autorisant le swap ? (O/N) : ");
+            scanf("%c", &entree);
+            clear_buffer();
+            capitalize(&entree);
+        }
+        if (entree == 'O') {
+            SWAP_ALLOWED = true;
+        } else {
+            SWAP_ALLOWED = false;
+        }
     }
 }
 
@@ -350,11 +368,10 @@ int main() {
     srand(time(NULL));
     clear_screen();
 
-    configure_bot();
-
 	#ifdef DEBUG
 	   init_game_debug(game, &current_player);	
 	#else
+       configuration();
 	   init_game(game, &current_player);
 	#endif
 
