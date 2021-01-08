@@ -31,6 +31,12 @@ test: board.o display_debug.o bot_debug.o test.c
 bvb: board.o display_debug.o bot_debug.o bot-versus-bot.c
 	gcc -Wall -g board.o display_debug.o bot_debug.o bot-versus-bot.c -o bvb
 
+gui: board.o bot.o game_gui.o display.o
+	gcc -Wall board.o bot.o game_gui.o display.o -lSDL2 -lSDL2_image -lSDL2_ttf -o gui
+
+game_gui.o: game_gui.c
+	gcc -Wall -c game_gui.c
+
 
 clean:
 	rm -f *.o gyges gyges_debug bvb test
