@@ -28,37 +28,37 @@ typedef struct {
 } image;
 
 bool quit = false;
-image commands[6]; // 5 directions + cancel
-SDL_Texture * pieces[6]; // 3 sizes * 2 (normal and picked style)
+image controls[6]; // 5 directions + cancel
+SDL_Texture * pieces[3]; // 3 sizes
 
-void init_commands(SDL_Renderer *renderer) {
-    commands[GOAL].texture = IMG_LoadTexture(renderer, "assets/win.png");
-    commands[GOAL].rect.x = 580;
-    commands[GOAL].rect.y = 240;
+void init_controls(SDL_Renderer *renderer) {
+    controls[GOAL].texture = IMG_LoadTexture(renderer, "assets/win.png");
+    controls[GOAL].rect.x = 580;
+    controls[GOAL].rect.y = 240;
 
-    commands[SOUTH].texture = IMG_LoadTexture(renderer, "assets/arrow_s.png");
-    commands[SOUTH].rect.x = 620;
-    commands[SOUTH].rect.y = 410;
+    controls[SOUTH].texture = IMG_LoadTexture(renderer, "assets/arrow_s.png");
+    controls[SOUTH].rect.x = 620;
+    controls[SOUTH].rect.y = 410;
 
-    commands[NORTH].texture = IMG_LoadTexture(renderer, "assets/arrow_n.png");
-    commands[NORTH].rect.x = 620;
-    commands[NORTH].rect.y = 310;
+    controls[NORTH].texture = IMG_LoadTexture(renderer, "assets/arrow_n.png");
+    controls[NORTH].rect.x = 620;
+    controls[NORTH].rect.y = 310;
 
-    commands[EAST].texture = IMG_LoadTexture(renderer, "assets/arrow_e.png");
-    commands[EAST].rect.x = 660;
-    commands[EAST].rect.y = 360;
+    controls[EAST].texture = IMG_LoadTexture(renderer, "assets/arrow_e.png");
+    controls[EAST].rect.x = 660;
+    controls[EAST].rect.y = 360;
 
-    commands[WEST].texture = IMG_LoadTexture(renderer, "assets/arrow_w.png");
-    commands[WEST].rect.x = 570;
-    commands[WEST].rect.y = 360;
+    controls[WEST].texture = IMG_LoadTexture(renderer, "assets/arrow_w.png");
+    controls[WEST].rect.x = 570;
+    controls[WEST].rect.y = 360;
 
-    commands[5].texture = IMG_LoadTexture(renderer, "assets/cancel.png");
-    commands[5].rect.x = 585;
-    commands[5].rect.y = 480;
+    controls[5].texture = IMG_LoadTexture(renderer, "assets/cancel.png");
+    controls[5].rect.x = 585;
+    controls[5].rect.y = 480;
 
     for (int i = 0; i <= 5; i++) {
-        if(!commands[i].texture) fprintf(stderr, "IMG_LoadTexture: %s\n", IMG_GetError());
-        SDL_QueryTexture(commands[i].texture, NULL, NULL, &commands[i].rect.w, &commands[i].rect.h); 
+        if(!controls[i].texture) fprintf(stderr, "IMG_LoadTexture: %s\n", IMG_GetError());
+        SDL_QueryTexture(controls[i].texture, NULL, NULL, &controls[i].rect.w, &controls[i].rect.h); 
     }
 }
 
@@ -83,7 +83,7 @@ void init_pieces(SDL_Renderer *renderer) {
 
 direction direction_clicked(int x, int y) {
     for (direction i = GOAL; i <= WEST+1; i++) {
-        if (x > commands[i].rect.x && x < commands[i].rect.x+commands[i].rect.w && y > commands[i].rect.y && y < commands[i].rect.y+commands[i].rect.h) {
+        if (x > controls[i].rect.x && x < controls[i].rect.x+controls[i].rect.w && y > controls[i].rect.y && y < controls[i].rect.y+controls[i].rect.h) {
             return i;
         }
     }
@@ -98,17 +98,6 @@ position position_clicked(int x, int y) {
         response.line = DIMENSION-1 - (y-MARGIN_Y)/CELL_SIZE;
     }
     return response;
-}
-
-void onclick(int x, int y) {
-    position p = position_clicked(x, y);
-    direction d = direction_clicked(x, y);
-
-    if (p.line != -1) {
-        printf("click en case (%d, %d)\n", p.column, p.line);
-    } else if (d != -1) {
-        printf("click sur commande %d\n", d);
-    }
 }
 
 void clear_screen(SDL_Renderer *renderer) {
@@ -145,14 +134,14 @@ void disp_board(SDL_Renderer *renderer, board game) {
     }
 }
 
-void disp_commands(SDL_Renderer *renderer, board game) {
+void disp_controls(SDL_Renderer *renderer, board game) {
     for (direction dir = GOAL; dir <= WEST; dir++) {
         if (is_move_possible(game, dir)) {
-            SDL_RenderCopy(renderer, commands[dir].texture, NULL, &commands[dir].rect);
+            SDL_RenderCopy(renderer, controls[dir].texture, NULL, &controls[dir].rect);
         }
     }
     if (picked_piece_size(game) != NONE) {
-        SDL_RenderCopy(renderer, commands[5].texture, NULL, &commands[5].rect); // cancel
+        SDL_RenderCopy(renderer, controls[5].texture, NULL, &controls[5].rect); // cancel
     }
 }
 
@@ -172,13 +161,13 @@ void init_sdl(SDL_Window **pscreen, SDL_Renderer **prenderer) {
         exit(EXIT_FAILURE);
     }
 
-    init_commands(*prenderer);
+    init_controls(*prenderer);
     init_pieces(*prenderer);
 }
 
 void clean_sdl(SDL_Renderer *renderer) {
     for (direction i = GOAL; i <= WEST+1; i++) {
-        SDL_DestroyTexture(commands[i].texture);
+        SDL_DestroyTexture(controls[i].texture);
     }
 
     for (int i = 1; i <= 3; i++) {
@@ -212,7 +201,8 @@ void choose_piece_to_pick(board game, player player) {
     }
 }
 
-void wait_for_move(board game) {
+/* return true if the move is canceled */
+bool wait_for_move(board game) {
     SDL_Event event;
     direction clicked;
 
@@ -223,11 +213,15 @@ void wait_for_move(board game) {
         }
         if (event.type == SDL_QUIT) {
             quit = true;
-            return;
+            return false;
         }
         clicked = direction_clicked(event.button.x, event.button.y);
-        if (move_piece(game, clicked) == OK) {
-            return;
+        if (clicked == 5) {
+            cancel_step(game);
+            return movement_left(game) == -1;
+        }
+        if (clicked != -1 && move_piece(game, clicked) == OK) {
+            return false;
         }
     }
 }
@@ -264,6 +258,7 @@ int main() {
     player current_player;
     board game = new_game();
     char message[100];
+    bool move_canceled = false;
 
     init_sdl(&screen, &renderer);
 
@@ -288,20 +283,20 @@ int main() {
 
     while (!quit) {
         clear_screen(renderer);
-        if (movement_left(game) == -1) {
+        if (movement_left(game) == -1 && !move_canceled) {
             current_player = next_player(current_player);
             sprintf(message, "Joueur %s, à ton tour !", player_name(current_player));
             disp_message(message, font, renderer);
         }
 
         disp_board(renderer, game);
-        disp_commands(renderer, game);
+        disp_controls(renderer, game);
         SDL_RenderPresent(renderer);
 
         if (movement_left(game) == -1) {
             choose_piece_to_pick(game, current_player);
         } else {
-            wait_for_move(game);
+            move_canceled = wait_for_move(game);
         }
     }
     
