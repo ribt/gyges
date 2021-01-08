@@ -4,6 +4,9 @@ gyges: board.o display.o game.o
 game.o: game.c board.h display.h
 	gcc -Wall -c game.c
 
+board.o: board.c board.h
+	gcc -Wall -c board.c
+
 display.o: display.c board.h
 	gcc -Wall -c display.c
 
@@ -17,4 +20,4 @@ game_debug.o: game.c board.h display.h
 	gcc -Wall -D DEBUG -g -c game.c -o game_debug.o
 
 clean:
-	rm -f game.o display.o game_debug.o display_debug.o gyges gyges_debug
+	rm -f *.o gyges gyges_debug
