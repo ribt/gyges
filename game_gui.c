@@ -29,7 +29,7 @@ typedef struct {
 
 bool quit = false;
 image controls[6]; // 5 directions + cancel
-SDL_Texture * pieces[6]; // 3 sizes * 2 (normal and picked style)
+SDL_Texture * pieces[3]; // 3 sizes
 
 
 void init_controls(SDL_Renderer *renderer) {
