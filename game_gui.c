@@ -27,6 +27,7 @@ typedef struct {
     SDL_Rect rect;
 } image;
 
+bool quit = false;
 image commands[6]; // 5 directions + cancel
 SDL_Texture * pieces[3];
 
@@ -56,7 +57,7 @@ void init_commands(SDL_Renderer *renderer) {
     commands[5].rect.y = 480;
 
     for (int i = 0; i <= 5; i++) {
-        if(!commands[i].texture) fprintf(stderr, "IMG_LoadTexture: %s\n", SDL_GetError());
+        if(!commands[i].texture) fprintf(stderr, "IMG_LoadTexture: %s\n", IMG_GetError());
         SDL_QueryTexture(commands[i].texture, NULL, NULL, &commands[i].rect.w, &commands[i].rect.h); 
     }
 }
@@ -94,7 +95,7 @@ position position_clicked(int x, int y) {
 
     if (x > MARGIN_X && x < MARGIN_X+DIMENSION*CELL_SIZE && y > MARGIN_Y && y < MARGIN_Y+DIMENSION*CELL_SIZE) {
         response.column = (x-MARGIN_X)/CELL_SIZE;
-        response.line = (y-MARGIN_Y)/CELL_SIZE;
+        response.line = DIMENSION-1 - (y-MARGIN_Y)/CELL_SIZE;
     }
     return response;
 }
@@ -136,7 +137,7 @@ void display_flip(SDL_Renderer *renderer, board game) {
             if (piece_size > 0) {
                 SDL_QueryTexture(pieces[piece_size], NULL, NULL, &rect.w, &rect.h);
                 rect.x = MARGIN_X + CELL_SIZE*column + 10;
-                rect.y = MARGIN_Y + CELL_SIZE*line;
+                rect.y = MARGIN_Y + CELL_SIZE*(DIMENSION-1 - line);
                 SDL_RenderCopy(renderer, pieces[piece_size], NULL, &rect);
 
             }
@@ -167,7 +168,7 @@ void init_sdl(SDL_Window **pscreen, SDL_Renderer **prenderer) {
     init_pieces(*prenderer);
 }
 
-void clean_sdl(SDL_Window *screen, SDL_Renderer *renderer) {
+void clean_sdl(SDL_Renderer *renderer) {
     for (direction i = GOAL; i <= WEST+1; i++) {
         SDL_DestroyTexture(commands[i].texture);
     }
@@ -177,18 +178,36 @@ void clean_sdl(SDL_Window *screen, SDL_Renderer *renderer) {
     }
 
     SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(screen);
+    // SDL_DestroyWindow(screen); TO FIX : pass the screen
     IMG_Quit();
     TTF_Quit();
     SDL_Quit();
 }
 
+void choose_piece_to_pick(board game, player player) {
+    SDL_Event event;
+    position clicked;
+
+    while (true) {
+        SDL_WaitEvent(&event);
+        while (event.type != SDL_QUIT && (event.type != SDL_MOUSEBUTTONUP || event.button.button != 1)) {
+            SDL_WaitEvent(&event);
+        }
+        if (event.type == SDL_QUIT) {
+            quit = true;
+            return;
+        }
+        clicked = position_clicked(event.button.x, event.button.y);
+        if (pick_piece(game, player, clicked.line, clicked.column) == OK) {
+            return;
+        }
+    }
+}
+
 int main() {
     SDL_Window *screen;
     SDL_Renderer *renderer;
-    SDL_Event event;
-    bool quit = false;
-    // player current_player;
+    player current_player;
     board game = new_game();
 
     init_sdl(&screen, &renderer);
@@ -207,27 +226,16 @@ int main() {
     place_piece(game, THREE, NORTH_P, 4);
     place_piece(game, THREE, NORTH_P, 5);
 
-    // current_player = SOUTH_P;
-    
+    current_player = SOUTH_P;
+
     while (!quit) {
-        while (SDL_PollEvent(&event)) {
-            switch (event.type) {
-                case SDL_QUIT:
-                    quit = true;
-                    break;
-                case SDL_MOUSEBUTTONUP:
-                    if (event.button.button == 1) {
-                        onclick(event.button.x, event.button.y);
-                    }
-                    break;
-            }
-            if (quit) break;
-        }
-
-       display_flip(renderer, game);
+        display_flip(renderer, game);
+        choose_piece_to_pick(game, current_player);
+        current_player = next_player(current_player);
     }
+    
 
-    clean_sdl(screen, renderer);
+    clean_sdl(renderer);
  
     return EXIT_SUCCESS;
 }
