@@ -6,8 +6,6 @@
 #include "bot.h"
 #include "display.h"
 
-void set_map(board game, int map[DIMENSION][DIMENSION]);
-
 int main() {
     srand(time(NULL));
     board game = new_game();
