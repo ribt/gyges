@@ -16,7 +16,7 @@
 #define MARGIN_RIGHT 230
 #define MARGIN_TOP 120
 #define MARGIN_BOTTOM 100
-#define DELAY 10
+#define DELAY 1
 
 typedef struct {
     int line;
@@ -312,11 +312,57 @@ char * player_name(player this_player) {
     return "inconnu";
 }
 
-bool process_event(Env *env, SDL_Event *event) {
+void drag_initial_pieces(Env *env, SDL_Event *event) {
     int piece_clicked;
     position pos_clicked;
-    direction dir_clicked;
 
+    if (event->type == SDL_MOUSEBUTTONDOWN && event->button.button == 1) {
+        piece_clicked = initial_piece_clicked(env, event->button.x, event->button.y);
+        if (piece_clicked > -1) {
+            env->dragging_piece = piece_clicked;
+        }
+        return;
+    }
+
+    if (env->dragging_piece > -1 && event->type == SDL_MOUSEBUTTONUP && event->button.button == 1) {
+        pos_clicked = position_clicked(env, event->button.x, event->button.y);
+        if ((env->current_player == NORTH_P && pos_clicked.line == DIMENSION-1) || (env->current_player == SOUTH_P && pos_clicked.line == 0)) {
+            if (place_piece(env->game, env->initial_pieces[env->dragging_piece].size, env->current_player, pos_clicked.column) == OK) {
+                env->initial_pieces[env->dragging_piece].size = NONE;
+            }
+        }
+        env->dragging_piece = -1;
+        return;          
+    }
+}
+
+void choose_piece_to_pick(Env *env, SDL_Event *event) {
+    position pos_clicked = position_clicked(env, event->button.x, event->button.y);
+
+    if (pick_piece(env->game, env->current_player, pos_clicked.line, pos_clicked.column) == OK) {
+        return;
+    }
+}
+
+void choose_direction(Env *env, SDL_Event *event) {
+    direction dir_clicked = direction_clicked(env, event->button.x, event->button.y);
+
+    if (dir_clicked == 5) {
+        cancel_step(env->game);
+        return;
+    }
+    if (dir_clicked != -1 && move_piece(env->game, dir_clicked) == OK) {
+        if (movement_left(env->game) == -1) {
+            env->current_player = next_player(env->current_player);
+            sprintf(env->message, "Joueur %s, à ton tour !", player_name(env->current_player));
+        } else {
+            env->message[0] = 0;
+        }
+        return;
+    }
+}
+
+bool process_event(Env *env, SDL_Event *event) {  
     if (event->type == SDL_QUIT) {
         return true;
     }
@@ -328,51 +374,22 @@ bool process_event(Env *env, SDL_Event *event) {
     }
 
     if (!env->placement_finished) {
-        if (event->type == SDL_MOUSEBUTTONDOWN && event->button.button == 1) {
-            piece_clicked = initial_piece_clicked(env, event->button.x, event->button.y);
-            if (piece_clicked > -1) {
-                env->dragging_piece = piece_clicked;
-            }
-            return false;
-        }
-        if (env->dragging_piece > -1 && event->type == SDL_MOUSEBUTTONUP && event->button.button == 1) {
-            pos_clicked = position_clicked(env, event->button.x, event->button.y);
-            if ((env->current_player == NORTH_P && pos_clicked.line == DIMENSION-1) || (env->current_player == SOUTH_P && pos_clicked.line == 0)) {
-                if (place_piece(env->game, env->initial_pieces[env->dragging_piece].size, env->current_player, pos_clicked.column) == OK) {
-                    env->initial_pieces[env->dragging_piece].size = NONE;
-                }
-            }
-            env->dragging_piece = -1;
-            return false;          
-        }
+        drag_initial_pieces(env, event);
+        return false;
     }
-        
 
     if (get_winner(env->game) != NO_PLAYER) {
         return false;
     }
 
     if (event->type == SDL_MOUSEBUTTONUP && event->button.button == 1) {
-        if (picked_piece_size(env->game) == NONE) { // choose a piece to pick
-            pos_clicked = position_clicked(env, event->button.x, event->button.y);
-            if (pick_piece(env->game, env->current_player, pos_clicked.line, pos_clicked.column) == OK) {
-                return false;
-            }
-        } else { // move
-            dir_clicked = direction_clicked(env, event->button.x, event->button.y);
-            if (dir_clicked == 5) {
-                cancel_step(env->game);
-                return false;
-            }
-            if (dir_clicked != -1 && move_piece(env->game, dir_clicked) == OK) {
-                if (movement_left(env->game) == -1) {
-                    env->current_player = next_player(env->current_player);
-                    sprintf(env->message, "Joueur %s, à ton tour !", player_name(env->current_player));
-                } else {
-                    env->message[0] = 0;
-                }
-                return false;
-            }
+        if (picked_piece_size(env->game) == NONE) {
+            choose_piece_to_pick(env, event);
+            return false;
+            
+        } else {
+            choose_direction(env, event);
+            return false;
         }
     }
 
