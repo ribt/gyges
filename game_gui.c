@@ -14,6 +14,7 @@
 #define MARGIN_LEFT 100
 #define MARGIN_RIGHT 230
 #define MARGIN_TOP 120
+#define DELAY 10
 
 typedef struct {
     int line;
@@ -31,6 +32,7 @@ typedef struct {
     TTF_Font *font;
     SDL_Texture *pieces[3];
     image controls[6];
+    board game;
 } Env;
 
 
@@ -128,7 +130,7 @@ void clear_screen(Env *env) {
     SDL_RenderClear(env->renderer);
 }
 
-void disp_board(Env *env, board game) {
+void disp_board(Env *env) {
     size piece_size;
     SDL_Rect rect;
     int window_w;
@@ -146,9 +148,9 @@ void disp_board(Env *env, board game) {
 
     for (int line = 0; line < DIMENSION; line++) {
         for (int column = 0; column < DIMENSION; column++) {
-            piece_size = get_piece_size(game, line, column);
-            if (line == picked_piece_line(game) && column == picked_piece_column(game)) {
-                piece_size = picked_piece_size(game);
+            piece_size = get_piece_size(env->game, line, column);
+            if (line == picked_piece_line(env->game) && column == picked_piece_column(env->game)) {
+                piece_size = picked_piece_size(env->game);
             }
             if (piece_size > NONE) {
                 SDL_QueryTexture(env->pieces[piece_size-1], NULL, NULL, &rect.w, &rect.h);
@@ -161,13 +163,13 @@ void disp_board(Env *env, board game) {
     }
 }
 
-void disp_controls(Env *env, board game) {
+void disp_controls(Env *env) {
     for (direction dir = GOAL; dir <= WEST; dir++) {
-        if (is_move_possible(game, dir)) {
+        if (is_move_possible(env->game, dir)) {
             SDL_RenderCopy(env->renderer, env->controls[dir].texture, NULL, &env->controls[dir].rect);
         }
     }
-    if (picked_piece_size(game) != NONE) {
+    if (picked_piece_size(env->game) != NONE) {
         SDL_RenderCopy(env->renderer, env->controls[5].texture, NULL, &env->controls[5].rect); // cancel
     }
 }
@@ -208,7 +210,7 @@ void clean_sdl(Env *env) {
     SDL_Quit();
 }
 
-void choose_piece_to_pick(Env *env, board game, player player) {
+void choose_piece_to_pick(Env *env, player player) {
     SDL_Event event;
     position clicked;
 
@@ -222,14 +224,14 @@ void choose_piece_to_pick(Env *env, board game, player player) {
             return;
         }
         clicked = position_clicked(env, event.button.x, event.button.y);
-        if (pick_piece(game, player, clicked.line, clicked.column) == OK) {
+        if (pick_piece(env->game, player, clicked.line, clicked.column) == OK) {
             return;
         }
     }
 }
 
 /* return true if the move is canceled */
-bool wait_for_move(Env *env, board game) {
+bool wait_for_move(Env *env) {
     SDL_Event event;
     direction clicked;
 
@@ -244,10 +246,10 @@ bool wait_for_move(Env *env, board game) {
         }
         clicked = direction_clicked(env, event.button.x, event.button.y);
         if (clicked == 5) {
-            cancel_step(game);
-            return movement_left(game) == -1;
+            cancel_step(env->game);
+            return movement_left(env->game) == -1;
         }
-        if (clicked != -1 && move_piece(game, clicked) == OK) {
+        if (clicked != -1 && move_piece(env->game, clicked) == OK) {
             return false;
         }
     }
@@ -283,8 +285,8 @@ char * player_name(player this_player) {
 
 int main() {
     Env env;
+    env.game = new_game();
     player current_player;
-    board game = new_game();
     char message[100];
     bool move_canceled = false;
 
@@ -293,38 +295,27 @@ int main() {
     env.font = TTF_OpenFont("assets/ubuntu.ttf", 30);
     if (!env.font) {fprintf(stderr, "TTF_OpenFont: %s\n", TTF_GetError());}
 
-    place_piece(game, ONE, SOUTH_P, 0);
-    place_piece(game, THREE, SOUTH_P, 1);
-    place_piece(game, TWO, SOUTH_P, 2);
-    place_piece(game, THREE, SOUTH_P, 3);
-    place_piece(game, ONE, SOUTH_P, 4);
-    place_piece(game, TWO, SOUTH_P, 5);
-
-    place_piece(game, ONE, NORTH_P, 0);
-    place_piece(game, ONE, NORTH_P, 1);
-    place_piece(game, TWO, NORTH_P, 2);
-    place_piece(game, TWO, NORTH_P, 3);
-    place_piece(game, THREE, NORTH_P, 4);
-    place_piece(game, THREE, NORTH_P, 5);
+    random_piece_placement(env.game, SOUTH_P);
+    random_piece_placement(env.game, NORTH_P);
 
     current_player = NORTH_P;
 
     while (!quit) {
         clear_screen(&env);
-        if (movement_left(game) == -1 && !move_canceled) {
+        if (movement_left(env.game) == -1 && !move_canceled) {
             current_player = next_player(current_player);
             sprintf(message, "Joueur %s, à ton tour !", player_name(current_player));
             disp_message(&env, message);
         }
 
-        disp_board(&env, game);
-        disp_controls(&env, game);
+        disp_board(&env);
+        disp_controls(&env);
         SDL_RenderPresent(env.renderer);
 
-        if (movement_left(game) == -1) {
-            choose_piece_to_pick(&env, game, current_player);
+        if (movement_left(env.game) == -1) {
+            choose_piece_to_pick(&env, current_player);
         } else {
-            move_canceled = wait_for_move(&env, game);
+            move_canceled = wait_for_move(&env);
         }
     }
     
