@@ -28,7 +28,6 @@ void capitalize(char *pletter) {
 /* This function is called one time at the begining of the game to:
 - Choose a random player to start.
 - Ask players to players to place their pieces.
-
 The players have to place all their pieces in the same round because we think it's faster and more ergonomic.
 */
 void init_game(board game, player *pcurrent_player) {
