@@ -33,6 +33,9 @@ typedef struct {
     SDL_Texture *pieces[3];
     image controls[6];
     board game;
+    player current_player;
+    bool placement_finished;
+    char message[100];
 } Env;
 
 
@@ -255,7 +258,7 @@ bool wait_for_move(Env *env) {
     }
 }
 
-void disp_message(Env *env, char *text) {
+void disp_message(Env *env) {
     SDL_Surface *surface;
     SDL_Texture *texture;
     SDL_Rect rect;
@@ -264,7 +267,7 @@ void disp_message(Env *env, char *text) {
 
     SDL_GetWindowSize(env->window, &window_w, NULL);
 
-    surface = TTF_RenderUTF8_Solid(env->font, text, black);
+    surface = TTF_RenderUTF8_Solid(env->font, env->message, black);
     texture = SDL_CreateTextureFromSurface(env->renderer, surface);
 
     SDL_QueryTexture(texture, NULL, NULL, &rect.w, &rect.h);
@@ -283,14 +286,57 @@ char * player_name(player this_player) {
     return "inconnu";
 }
 
+bool process_event(Env *env, SDL_Event *event) {
+    position pos_clicked;
+    direction dir_clicked;
+    if (event->type == SDL_QUIT) {
+        return true;
+    }
+
+    if (!env->placement_finished) {
+        // TO DO
+        return false;
+    }
+
+    if (get_winner(env->game) != NO_PLAYER) {
+        return false;
+    }
+
+    if (event->type == SDL_MOUSEBUTTONUP && event->button.button == 1) {
+        if (picked_piece_size(env->game) == NONE) { // choose a piece to pick
+            pos_clicked = position_clicked(env, event->button.x, event->button.y);
+            if (pick_piece(env->game, env->current_player, pos_clicked.line, pos_clicked.column) == OK) {
+                return false;
+            }
+        } else { // move
+            dir_clicked = direction_clicked(env, event->button.x, event->button.y);
+            if (dir_clicked == 5) {
+                cancel_step(env->game);
+                return false;
+            }
+            if (dir_clicked != -1 && move_piece(env->game, dir_clicked) == OK) {
+                if (movement_left(env->game) == -1) {
+                    env->current_player = next_player(env->current_player);
+                    sprintf(env->message, "Joueur %s, à ton tour !", player_name(env->current_player));
+                } else {
+                    env->message[0] = 0;
+                }
+                return false;
+            }
+        }
+    }
+
+    return false;
+}
+
 int main() {
     Env env;
-    env.game = new_game();
-    player current_player;
-    char message[100];
-    bool move_canceled = false;
+    SDL_Event event;
 
     init_sdl(&env);
+
+    env.game = new_game();
+    env.message[0] = 0; // important !
 
     env.font = TTF_OpenFont("assets/ubuntu.ttf", 30);
     if (!env.font) {fprintf(stderr, "TTF_OpenFont: %s\n", TTF_GetError());}
@@ -298,29 +344,28 @@ int main() {
     random_piece_placement(env.game, SOUTH_P);
     random_piece_placement(env.game, NORTH_P);
 
-    current_player = NORTH_P;
+    env.placement_finished = true;
+
+    env.current_player = SOUTH_P;
+    sprintf(env.message, "Joueur %s, à ton tour !", player_name(env.current_player));
 
     while (!quit) {
-        clear_screen(&env);
-        if (movement_left(env.game) == -1 && !move_canceled) {
-            current_player = next_player(current_player);
-            sprintf(message, "Joueur %s, à ton tour !", player_name(current_player));
-            disp_message(&env, message);
+        /* manage events */
+        while (SDL_PollEvent(&event)) {
+            quit = process_event(&env, &event);
+            if(quit) break;
         }
 
+        clear_screen(&env);
+        disp_message(&env);
         disp_board(&env);
         disp_controls(&env);
         SDL_RenderPresent(env.renderer);
 
-        if (movement_left(env.game) == -1) {
-            choose_piece_to_pick(&env, current_player);
-        } else {
-            move_canceled = wait_for_move(&env);
-        }
+        SDL_Delay(DELAY);
     }
-    
 
     clean_sdl(&env);
- 
+
     return EXIT_SUCCESS;
 }
