@@ -15,7 +15,7 @@
 #define MARGIN_LEFT 100
 #define MARGIN_RIGHT 230
 #define MARGIN_TOP 120
-#define MARGIN_BOTTOM 20
+#define MARGIN_BOTTOM 100
 #define DELAY 10
 
 typedef struct {
@@ -28,6 +28,11 @@ typedef struct {
     SDL_Rect rect;
 } image;
 
+struct available_piece {
+    size size;
+    SDL_Rect rect;    
+};
+
 typedef struct {
     SDL_Window *window;
     SDL_Renderer *renderer;
@@ -38,6 +43,8 @@ typedef struct {
     board game;
     player current_player;
     bool placement_finished;
+    int dragging_piece;
+    struct available_piece initial_pieces[DIMENSION];
     char message[100];
 } Env;
 
@@ -83,6 +90,20 @@ void init_controls(Env *env) {
     place_controls(env);
 }
 
+void place_initial_pieces(Env *env) {
+    int window_w, window_h;
+
+    SDL_GetWindowSize(env->window, &window_w, &window_h);
+
+    for (int i = 0; i< DIMENSION; i++) {
+        env->initial_pieces[i].size = i/2 + 1;
+        env->initial_pieces[i].rect.y = MARGIN_TOP + DIMENSION*env->cell_size + 20;
+        env->initial_pieces[i].rect.x = 20 + i*(env->initial_pieces[0].rect.w+10);
+        env->initial_pieces[i].rect.w = env->cell_size;
+        env->initial_pieces[i].rect.h = env->cell_size;
+    }
+}
+
 void init_pieces(Env *env) {
     env->pieces[0] = IMG_LoadTexture(env->renderer, "assets/1piece.png");
     env->pieces[1] = IMG_LoadTexture(env->renderer, "assets/2piece.png");
@@ -91,27 +112,9 @@ void init_pieces(Env *env) {
     for (int i = 0; i < 3; i++) {
         if(!env->pieces[i]) fprintf(stderr, "IMG_LoadTexture: %s\n", IMG_GetError());
     }
+
+    place_initial_pieces(env);
 }
-
-// void init_piecesize(SDL_Renderer *renderer) {
-//     placement_first_piece[ONE].texture = IMG_LoadTexture(renderer, "assets/1piece.png");
-//     placement_first_piece[ONE].rect.x = 550;
-//     placement_first_piece[ONE].rect.y = 0;
-
-
-//     placement_first_piece[TWO].texture = IMG_LoadTexture(renderer, "assets/2piece.png");
-//     placement_first_piece[TWO].rect.x = 550;
-//     placement_first_piece[TWO].rect.y = 200;
-
-//     placement_first_piece[THREE].texture = IMG_LoadTexture(renderer, "assets/3piece.png");
-//     placement_first_piece[THREE].rect.x = 550;
-//     placement_first_piece[THREE].rect.y = 400;
-
-//     for (int i = 1; i <= 3; i++) {
-//         if(!placement_first_piece[i].texture) fprintf(stderr, "IMG_LoadTexture: %s\n", IMG_GetError());
-//         SDL_QueryTexture(placement_first_piece[i].texture, NULL, NULL, &placement_first_piece[i].rect.w, &placement_first_piece[i].rect.h); 
-//     }
-// }
 
 void calculate_cell_size(Env * env) {
     int window_w, window_h;
@@ -149,6 +152,16 @@ position position_clicked(Env *env, int x, int y) {
     return response;
 }
 
+int initial_piece_clicked(Env *env, int x, int y) {
+    for (int i = 0; i <= DIMENSION; i++) {
+        if (x > env->initial_pieces[i].rect.x && x < env->initial_pieces[i].rect.x+env->initial_pieces[i].rect.w &&
+              y > env->initial_pieces[i].rect.y && y < env->initial_pieces[i].rect.y+env->initial_pieces[i].rect.h) {
+            return i;
+        }
+    }
+    return -1;
+}
+
 void clear_screen(Env *env) {
     /* background in gray */
     SDL_SetRenderDrawColor(env->renderer, 160, 160, 160, 255); 
@@ -184,22 +197,24 @@ void disp_board(Env *env) {
     }
 }
 
-// size size_clicked(int x, int y) {
-//     for (size i = ONE; i <= THREE; i++) {
-//         if (x > placement_first_piece[i].rect.x && x < placement_first_piece[i].rect.x+placement_first_piece[i].rect.w && y > placement_first_piece[i].rect.y && y < placement_first_piece[i].rect.y+placement_first_piece[i].rect.h) {
-//             return i;
-//         }
-//     }
-//     return -1;
-// }
+void disp_initial_pieces(Env *env) {
+    SDL_Rect rect;
+    int mouse_x, mouse_y;
 
-// void disp_piecesize(Env *env) {
-//     for (size i = ONE; i <= THREE; i++) {
-//         if (nb_pieces_available(env->game, i, env->current_player) > 0) {
-//             SDL_RenderCopy(env->renderer, placement_first_piece[i].texture, NULL, &placement_first_piece[i].rect);
-//         }
-//     }
-// }
+    for (int i = 0; i < DIMENSION; i++) {
+        if (i == env->dragging_piece) {
+            SDL_GetMouseState(&mouse_x, &mouse_y);
+            rect.x = mouse_x - env->initial_pieces[i].rect.w/2;
+            rect.y = mouse_y - env->initial_pieces[i].rect.h/2;
+            rect.w = env->initial_pieces[i].rect.w;
+            rect.h = env->initial_pieces[i].rect.h;
+            SDL_RenderCopy(env->renderer, env->pieces[env->initial_pieces[i].size-1], NULL, &rect);
+        } else if (env->initial_pieces[i].size > NONE) {
+            SDL_RenderCopy(env->renderer, env->pieces[env->initial_pieces[i].size-1], NULL, &env->initial_pieces[i].rect);
+        }
+    }
+
+}
 
 void disp_controls(Env *env) {
     for (direction dir = GOAL; dir <= WEST; dir++) {
@@ -212,7 +227,7 @@ void disp_controls(Env *env) {
     }
 }
 
-void init_sdl(Env *env) {
+void initialisation(Env *env) {
     if(SDL_Init(SDL_INIT_VIDEO) < 0) {fprintf(stderr, "Erreur d'initialisation de la SDL : %s\n", SDL_GetError());}
 
     if(IMG_Init(IMG_INIT_PNG) != IMG_INIT_PNG) fprintf(stderr, "Error: IMG_Init PNG (%s)", IMG_GetError());
@@ -224,14 +239,27 @@ void init_sdl(Env *env) {
     env->renderer = SDL_CreateRenderer(env->window, -1, SDL_RENDERER_PRESENTVSYNC);
 
     if (env->window == NULL || env->renderer == NULL) {
-        printf("Erreur : %s\n", SDL_GetError());
+        fprintf(stderr, "Erreur : %s\n", SDL_GetError());
         exit(EXIT_FAILURE);
     }
 
+    calculate_cell_size(env);
     init_controls(env);
     init_pieces(env);
-    // init_piecesize(env->renderer);
-    calculate_cell_size(env);
+
+    env->game = new_game();
+    env->message[0] = 0; // message = ""
+    env->font = TTF_OpenFont("assets/ubuntu.ttf", 30);
+    if (!env->font) {fprintf(stderr, "TTF_OpenFont: %s\n", TTF_GetError());}
+
+    env->placement_finished = false;
+    env->dragging_piece = -1;
+
+    if (rand()%2 == 0) {  // random choice of the first player
+        env->current_player = NORTH_P;
+    } else {
+        env->current_player = SOUTH_P;
+    }
 }
 
 void clean_sdl(Env *env) {
@@ -249,7 +277,6 @@ void clean_sdl(Env *env) {
     TTF_Quit();
     SDL_Quit();
 }
-
 
 void disp_message(Env *env) {
     SDL_Surface *surface;
@@ -286,6 +313,7 @@ char * player_name(player this_player) {
 }
 
 bool process_event(Env *env, SDL_Event *event) {
+    int piece_clicked;
     position pos_clicked;
     direction dir_clicked;
 
@@ -300,9 +328,25 @@ bool process_event(Env *env, SDL_Event *event) {
     }
 
     if (!env->placement_finished) {
-        // TO DO
-        return false;
+        if (event->type == SDL_MOUSEBUTTONDOWN && event->button.button == 1) {
+            piece_clicked = initial_piece_clicked(env, event->button.x, event->button.y);
+            if (piece_clicked > -1) {
+                env->dragging_piece = piece_clicked;
+            }
+            return false;
+        }
+        if (env->dragging_piece > -1 && event->type == SDL_MOUSEBUTTONUP && event->button.button == 1) {
+            pos_clicked = position_clicked(env, event->button.x, event->button.y);
+            if ((env->current_player == NORTH_P && pos_clicked.line == DIMENSION-1) || (env->current_player == SOUTH_P && pos_clicked.line == 0)) {
+                if (place_piece(env->game, env->initial_pieces[env->dragging_piece].size, env->current_player, pos_clicked.column) == OK) {
+                    env->initial_pieces[env->dragging_piece].size = NONE;
+                }
+            }
+            env->dragging_piece = -1;
+            return false;          
+        }
     }
+        
 
     if (get_winner(env->game) != NO_PLAYER) {
         return false;
@@ -335,6 +379,18 @@ bool process_event(Env *env, SDL_Event *event) {
     return false;
 }
 
+void render(Env *env) {
+    clear_screen(env);
+    disp_message(env);
+    disp_board(env);
+    if (env->placement_finished) {
+        disp_controls(env);
+    } else {
+        disp_initial_pieces(env);
+    }
+    SDL_RenderPresent(env->renderer);
+}
+
 int main() {
     Env env;
     SDL_Event event;
@@ -342,21 +398,9 @@ int main() {
 
     srand(time(NULL));
 
-    init_sdl(&env);
+    initialisation(&env);
 
-    env.game = new_game();
-    env.message[0] = 0; // important !
-
-    env.font = TTF_OpenFont("assets/ubuntu.ttf", 30);
-    if (!env.font) {fprintf(stderr, "TTF_OpenFont: %s\n", TTF_GetError());}
-
-    random_piece_placement(env.game, SOUTH_P);
-    random_piece_placement(env.game, NORTH_P);
-
-    env.placement_finished = true;
-
-    env.current_player = SOUTH_P;
-    sprintf(env.message, "Joueur %s, à ton tour !", player_name(env.current_player));
+    sprintf(env.message, "Joueur %s, place tes pièces !", player_name(env.current_player));
 
     while (!quit) {
         /* manage events */
@@ -365,11 +409,7 @@ int main() {
             if(quit) break;
         }
 
-        clear_screen(&env);
-        disp_message(&env);
-        disp_board(&env);
-        disp_controls(&env);
-        SDL_RenderPresent(env.renderer);
+        render(&env);
 
         SDL_Delay(DELAY);
     }
