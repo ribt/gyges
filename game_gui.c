@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <time.h>
 #include <stdbool.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
@@ -29,8 +30,9 @@ typedef struct {
 
 bool quit = false;
 image controls[6]; // 5 directions + cancel
+image placement_first_piece[3];
 SDL_Texture * pieces[3]; // 3 sizes
-
+bool firstround  = true;
 
 void init_controls(SDL_Renderer *renderer) {
     controls[GOAL].texture = IMG_LoadTexture(renderer, "assets/win.png");
@@ -80,6 +82,26 @@ void init_pieces(SDL_Renderer *renderer) {
 
     SDL_FreeSurface(surface);
     TTF_CloseFont(font);
+}
+
+void init_piecesize(SDL_Renderer *renderer) {
+    placement_first_piece[ONE].texture = IMG_LoadTexture(renderer, "assets/1piece.png");
+    placement_first_piece[ONE].rect.x = 580;
+    placement_first_piece[ONE].rect.y = 240;
+
+
+    placement_first_piece[TWO].texture = IMG_LoadTexture(renderer, "assets/2piece.png");
+    placement_first_piece[TWO].rect.x = 620;
+    placement_first_piece[TWO].rect.y = 410;
+
+    placement_first_piece[THREE].texture = IMG_LoadTexture(renderer, "assets/2piece.png");
+    placement_first_piece[THREE].rect.x = 620;
+    placement_first_piece[THREE].rect.y = 310;
+
+    for (int i = 0; i <= 5; i++) {
+        if(!placement_first_piece[i].texture) fprintf(stderr, "IMG_LoadTexture: %s\n", IMG_GetError());
+        SDL_QueryTexture(placement_first_piece[i].texture, NULL, NULL, &placement_first_piece[i].rect.w, &placement_first_piece[i].rect.h); 
+    }
 }
 
 direction direction_clicked(int x, int y) {
@@ -135,6 +157,21 @@ void disp_board(SDL_Renderer *renderer, board game) {
     }
 }
 
+size size_clicked(int x, int y) {
+    for (size i = ONE; i <= THREE; i++) {
+        if (x > placement_first_piece[i].rect.x && x < placement_first_piece[i].rect.x+placement_first_piece[i].rect.w && y > placement_first_piece[i].rect.y && y < placement_first_piece[i].rect.y+placement_first_piece[i].rect.h) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+void disp_piecesize(SDL_Renderer *renderer) {
+    for (size i = ONE; i <= THREE; i++) {
+        SDL_RenderCopy(renderer, placement_first_piece[ONE].texture, NULL, &placement_first_piece[ONE].rect);
+    }
+}
+
 void disp_controls(SDL_Renderer *renderer, board game) {
     for (direction dir = GOAL; dir <= WEST; dir++) {
         if (is_move_possible(game, dir)) {
@@ -182,15 +219,121 @@ void clean_sdl(SDL_Renderer *renderer) {
     SDL_Quit();
 }
 
+void disp_message(char *text, TTF_Font *font, SDL_Renderer *renderer) {
+    SDL_Surface *surface;
+    SDL_Texture *texture;
+    SDL_Rect rect;
+    SDL_Color black = {0, 0, 0};
+
+    surface = TTF_RenderUTF8_Solid(font, text, black);
+    texture = SDL_CreateTextureFromSurface(renderer, surface);
+
+    SDL_QueryTexture(texture, NULL, NULL, &rect.w, &rect.h);
+    rect.x = SCREEN_W/2 - rect.w/2;
+    rect.y = 50;
+    SDL_RenderCopy(renderer, texture, NULL, &rect);
+}
+
+char * player_name(player this_player) {
+    if (this_player == SOUTH_P) {
+        return "SUD";
+    }
+    if (this_player == NORTH_P) {
+        return "NORD";
+    }
+    return "inconnu";
+}
+
+void init_game(SDL_Renderer *renderer, board game, player *pcurrent_player) {
+    TTF_Font *font;
+    char message[1000];
+    int column;
+    size piece_size;
+    return_code response;
+
+    SDL_Event event;
+
+    font = TTF_OpenFont("assets/ubuntu.ttf", 30);
+    
+    if (!font) {
+        fprintf(stderr, "TTF_OpenFont: %s\n", TTF_GetError());
+    }
+
+    if (rand()%2 == 0) {  // random choice of the first player
+        *pcurrent_player = NORTH_P;
+    } else {
+        *pcurrent_player = SOUTH_P;
+    }
+
+    printf("Initialation des variables\n");
+
+    while (true) {
+        for (int i = 0; i < NB_PLAYERS; i++) {  // do the same for all players (i is never used)
+            column = 0;
+            while (column < DIMENSION) {  // place the pieces column by column
+                printf("Début du while column < DIMENSION\n");
+                disp_piecesize(renderer);
+                SDL_RenderPresent(renderer);
+                SDL_WaitEvent(&event);
+                
+                while (event.type != SDL_QUIT && (event.type != SDL_MOUSEBUTTONUP || event.button.button != 1)) {
+                    SDL_WaitEvent(&event);
+                }
+                
+                if (event.type == SDL_QUIT) {
+                    quit = true;
+                    return;
+                }
+
+                piece_size = size_clicked(event.button.x, event.button.y);
+
+                clear_screen(renderer);
+                sprintf(message, "Joueur %s, veuillez choisir de gauche à droite la taille des pièces à mettre sur votre première ligne.", player_name(*pcurrent_player));
+                disp_piecesize(renderer);
+                disp_message(message, font, renderer);
+                disp_board(renderer, game);
+                SDL_RenderPresent(renderer);
+
+                piece_size = size_clicked(event.button.x, event.button.y);
+
+                response = place_piece(game, piece_size, *pcurrent_player, column); // != EMPTY because we force the choice of the column
+                    
+                //Problème pour afficher les messsages d'erreur
+                    
+                if (response == PARAM) {
+                    clear_screen(renderer);
+                    printf("PARAM\n");
+                    sprintf(message, "Cette taille de pion n'existe pas.");
+                    disp_message(message, font, renderer);
+                    disp_board(renderer, game);
+                    SDL_RenderPresent(renderer);
+                }
+                
+                if (response == FORBIDDEN) {
+                    clear_screen(renderer);
+                    printf("FORBIDDEN\n");
+                    sprintf(message, "Il ne vous reste plus de pion de cette taille-là.");
+                    disp_message(message, font, renderer);
+                    disp_board(renderer, game);
+                    SDL_RenderPresent(renderer);
+                }
+                
+                if (response == OK) {         
+                    column++;
+                }
+            }
+            
+            *pcurrent_player = next_player(*pcurrent_player);
+        }
+    }
+}
+
 void choose_piece_to_pick(board game, player player) {
     SDL_Event event;
     position clicked;
 
     while (true) {
         SDL_WaitEvent(&event);
-        while (event.type != SDL_QUIT && (event.type != SDL_MOUSEBUTTONUP || event.button.button != 1)) {
-            SDL_WaitEvent(&event);
-        }
         if (event.type == SDL_QUIT) {
             quit = true;
             return;
@@ -227,30 +370,7 @@ bool wait_for_move(board game) {
     }
 }
 
-void disp_message(char *text, TTF_Font *font, SDL_Renderer *renderer) {
-    SDL_Surface *surface;
-    SDL_Texture *texture;
-    SDL_Rect rect;
-    SDL_Color black = {0, 0, 0};
 
-    surface = TTF_RenderUTF8_Solid(font, text, black);
-    texture = SDL_CreateTextureFromSurface(renderer, surface);
-
-    SDL_QueryTexture(texture, NULL, NULL, &rect.w, &rect.h);
-    rect.x = SCREEN_W/2 - rect.w/2;
-    rect.y = 50;
-    SDL_RenderCopy(renderer, texture, NULL, &rect);
-}
-
-char * player_name(player this_player) {
-    if (this_player == SOUTH_P) {
-        return "SUD";
-    }
-    if (this_player == NORTH_P) {
-        return "NORD";
-    }
-    return "inconnu";
-}
 
 int main() {
     SDL_Window *screen;
@@ -261,11 +381,14 @@ int main() {
     char message[100];
     bool move_canceled = false;
 
+    srand(time(NULL));
+
     init_sdl(&screen, &renderer);
 
     font = TTF_OpenFont("assets/ubuntu.ttf", 30);
     if (!font) {fprintf(stderr, "TTF_OpenFont: %s\n", TTF_GetError());}
 
+    /*
     place_piece(game, ONE, SOUTH_P, 0);
     place_piece(game, THREE, SOUTH_P, 1);
     place_piece(game, TWO, SOUTH_P, 2);
@@ -279,12 +402,13 @@ int main() {
     place_piece(game, TWO, NORTH_P, 3);
     place_piece(game, THREE, NORTH_P, 4);
     place_piece(game, THREE, NORTH_P, 5);
+    */
 
     current_player = NORTH_P;
-
+    
     while (!quit) {
         clear_screen(renderer);
-        if (movement_left(game) == -1 && !move_canceled) {
+        if (movement_left(game) == -1 && !move_canceled && !firstround) {
             current_player = next_player(current_player);
             sprintf(message, "Joueur %s, à ton tour !", player_name(current_player));
             disp_message(message, font, renderer);
@@ -293,6 +417,11 @@ int main() {
         disp_board(renderer, game);
         disp_controls(renderer, game);
         SDL_RenderPresent(renderer);
+
+        if (firstround) {
+            init_game(renderer, game, &current_player);
+            firstround = false;
+        }
 
         if (movement_left(game) == -1) {
             choose_piece_to_pick(game, current_player);
