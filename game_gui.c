@@ -8,15 +8,15 @@
 #include "board.h"
 #include "bot.h"
 
-// gcc display.c -lSDL2 -lSDL2_image
+// gcc game_gui.c -lSDL2 -lSDL2_image -lSDL2_ttf
 
 #define SCREEN_W 750
 #define SCREEN_H 600
-#define MARGIN_X 100
-#define MARGIN_Y 120
-#define CELL_SIZE 70
-
-#define DIMENSION 6
+#define MARGIN_LEFT 100
+#define MARGIN_RIGHT 230
+#define MARGIN_TOP 120
+#define MARGIN_BOTTOM 20
+#define DELAY 10
 
 typedef struct {
     int line;
@@ -28,43 +28,62 @@ typedef struct {
     SDL_Rect rect;
 } image;
 
-bool quit = false;
-image controls[6]; // 5 directions + cancel
-image placement_first_piece[4];
-SDL_Texture * pieces[3]; // 3 sizes
+typedef struct {
+    SDL_Window *window;
+    SDL_Renderer *renderer;
+    TTF_Font *font;
+    SDL_Texture *pieces[3];
+    image controls[6];
+    int cell_size;
+    board game;
+    player current_player;
+    bool placement_finished;
+    char message[100];
+} Env;
 
-void init_controls(SDL_Renderer *renderer) {
-    controls[GOAL].texture = IMG_LoadTexture(renderer, "assets/win.png");
-    controls[GOAL].rect.x = 580;
-    controls[GOAL].rect.y = 240;
+void place_controls(Env *env) {
+    int window_w, window_h;
+    int mid_x, mid_y;
 
-    controls[SOUTH].texture = IMG_LoadTexture(renderer, "assets/arrow_s.png");
-    controls[SOUTH].rect.x = 620;
-    controls[SOUTH].rect.y = 410;
+    SDL_GetWindowSize(env->window, &window_w, &window_h);
+    mid_x = MARGIN_LEFT + DIMENSION*env->cell_size + (window_w - MARGIN_LEFT - DIMENSION*env->cell_size)/2;
+    mid_y = (window_h+MARGIN_TOP/2)/2;
 
-    controls[NORTH].texture = IMG_LoadTexture(renderer, "assets/arrow_n.png");
-    controls[NORTH].rect.x = 620;
-    controls[NORTH].rect.y = 310;
+    env->controls[SOUTH].rect.x = mid_x - 0.5*env->controls[SOUTH].rect.w;
+    env->controls[SOUTH].rect.y = mid_y + 0.5*env->controls[EAST].rect.h;
 
-    controls[EAST].texture = IMG_LoadTexture(renderer, "assets/arrow_e.png");
-    controls[EAST].rect.x = 660;
-    controls[EAST].rect.y = 360;
+    env->controls[NORTH].rect.x = mid_x - 0.5*env->controls[NORTH].rect.w;
+    env->controls[NORTH].rect.y = mid_y - env->controls[NORTH].rect.h - 0.5*env->controls[EAST].rect.h;
 
-    controls[WEST].texture = IMG_LoadTexture(renderer, "assets/arrow_w.png");
-    controls[WEST].rect.x = 570;
-    controls[WEST].rect.y = 360;
+    env->controls[EAST].rect.x = mid_x + 0.5*env->controls[NORTH].rect.w;
+    env->controls[EAST].rect.y = mid_y - 0.5*env->controls[EAST].rect.h;
 
-    controls[5].texture = IMG_LoadTexture(renderer, "assets/cancel.png");
-    controls[5].rect.x = 585;
-    controls[5].rect.y = 480;
+    env->controls[WEST].rect.x = mid_x - 0.5*env->controls[NORTH].rect.w - env->controls[EAST].rect.w;
+    env->controls[WEST].rect.y = mid_y - 0.5*env->controls[EAST].rect.h;
 
-    for (int i = 0; i <= 5; i++) {
-        if(!controls[i].texture) fprintf(stderr, "IMG_LoadTexture: %s\n", IMG_GetError());
-        SDL_QueryTexture(controls[i].texture, NULL, NULL, &controls[i].rect.w, &controls[i].rect.h); 
-    }
+    env->controls[GOAL].rect.x = mid_x - 0.5*env->controls[GOAL].rect.w;
+    env->controls[GOAL].rect.y = env->controls[NORTH].rect.y - 15 - env->controls[GOAL].rect.h;
+
+    env->controls[5].rect.x = mid_x - 0.5*env->controls[5].rect.w;
+    env->controls[5].rect.y = env->controls[SOUTH].rect.y + env->controls[SOUTH].rect.h + 15;
 }
 
-void init_pieces(SDL_Renderer *renderer) {
+void init_controls(Env *env) {
+    env->controls[SOUTH].texture = IMG_LoadTexture(env->renderer, "assets/arrow_s.png");
+    env->controls[NORTH].texture = IMG_LoadTexture(env->renderer, "assets/arrow_n.png");
+    env->controls[EAST].texture = IMG_LoadTexture(env->renderer, "assets/arrow_e.png");   
+    env->controls[WEST].texture = IMG_LoadTexture(env->renderer, "assets/arrow_w.png");
+    env->controls[GOAL].texture = IMG_LoadTexture(env->renderer, "assets/win.png");
+    env->controls[5].texture = IMG_LoadTexture(env->renderer, "assets/cancel.png");
+
+    for (int i = 0; i <= 5; i++) {
+        if(!env->controls[i].texture) fprintf(stderr, "IMG_LoadTexture: %s\n", IMG_GetError());
+        SDL_QueryTexture(env->controls[i].texture, NULL, NULL, &env->controls[i].rect.w, &env->controls[i].rect.h);
+    }
+    place_controls(env);
+}
+
+void init_pieces(Env *env) {
     SDL_Surface * surface;
     TTF_Font * font;
     SDL_Color black = {0, 0, 0};
@@ -76,12 +95,13 @@ void init_pieces(SDL_Renderer *renderer) {
     for (int i = 0; i < 3; i++) {
         txt[0] = '1'+i;
         surface = TTF_RenderText_Solid(font, txt, black);
-        pieces[i] = SDL_CreateTextureFromSurface(renderer, surface);
+        env->pieces[i] = SDL_CreateTextureFromSurface(env->renderer, surface);
     }
 
     SDL_FreeSurface(surface);
     TTF_CloseFont(font);
 }
+
 
 void init_piecesize(SDL_Renderer *renderer) {
     placement_first_piece[ONE].texture = IMG_LoadTexture(renderer, "assets/1piece.png");
@@ -103,53 +123,71 @@ void init_piecesize(SDL_Renderer *renderer) {
     }
 }
 
-direction direction_clicked(int x, int y) {
+void calculate_cell_size(Env * env) {
+    int window_w, window_h;
+    int cell_size_w, cell_size_h;
+
+    SDL_GetWindowSize(env->window, &window_w, &window_h);
+
+    cell_size_w = (window_w - MARGIN_RIGHT - MARGIN_LEFT)/DIMENSION;
+    cell_size_h = (window_h - MARGIN_TOP - MARGIN_BOTTOM)/DIMENSION;
+
+    if (cell_size_w < cell_size_h) {
+        env->cell_size = cell_size_w;
+    } else {
+        env->cell_size = cell_size_h;
+    }
+}
+
+direction direction_clicked(Env *env, int x, int y) {
     for (direction i = GOAL; i <= WEST+1; i++) {
-        if (x > controls[i].rect.x && x < controls[i].rect.x+controls[i].rect.w && y > controls[i].rect.y && y < controls[i].rect.y+controls[i].rect.h) {
+        if (x > env->controls[i].rect.x && x < env->controls[i].rect.x+env->controls[i].rect.w && y > env->controls[i].rect.y && y < env->controls[i].rect.y+env->controls[i].rect.h) {
             return i;
         }
     }
     return -1;
 }
 
-position position_clicked(int x, int y) {
+position position_clicked(Env *env, int x, int y) {
     position response = {-1, -1};
 
-    if (x > MARGIN_X && x < MARGIN_X+DIMENSION*CELL_SIZE && y > MARGIN_Y && y < MARGIN_Y+DIMENSION*CELL_SIZE) {
-        response.column = (x-MARGIN_X)/CELL_SIZE;
-        response.line = DIMENSION-1 - (y-MARGIN_Y)/CELL_SIZE;
+    if (x > MARGIN_LEFT && x < MARGIN_LEFT+DIMENSION*env->cell_size && y > MARGIN_TOP && y < MARGIN_TOP+DIMENSION*env->cell_size) {
+        response.column = (x-MARGIN_LEFT)/env->cell_size;
+        response.line = DIMENSION-1 - (y-MARGIN_TOP)/env->cell_size;
     }
+
     return response;
 }
 
-void clear_screen(SDL_Renderer *renderer) {
+void clear_screen(Env *env) {
     /* background in gray */
-    SDL_SetRenderDrawColor(renderer, 160, 160, 160, 255); 
-    SDL_RenderClear(renderer);
+    SDL_SetRenderDrawColor(env->renderer, 160, 160, 160, 255); 
+    SDL_RenderClear(env->renderer);
 }
 
-void disp_board(SDL_Renderer *renderer, board game) {
+void disp_board(Env *env) {
     size piece_size;
     SDL_Rect rect;
 
     /* draw black lines to make te board */
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
+    SDL_SetRenderDrawColor(env->renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
     for (int i = 0; i <= DIMENSION; i++) {
-        SDL_RenderDrawLine(renderer, MARGIN_X, MARGIN_Y+i*CELL_SIZE, MARGIN_X+DIMENSION*CELL_SIZE, MARGIN_Y+i*CELL_SIZE);
-        SDL_RenderDrawLine(renderer, MARGIN_X+i*CELL_SIZE, MARGIN_Y, MARGIN_X+i*CELL_SIZE, MARGIN_Y+DIMENSION*CELL_SIZE);
+        SDL_RenderDrawLine(env->renderer, MARGIN_LEFT, MARGIN_TOP+i*env->cell_size, MARGIN_LEFT+DIMENSION*env->cell_size, MARGIN_TOP+i*env->cell_size);
+        SDL_RenderDrawLine(env->renderer, MARGIN_LEFT+i*env->cell_size, MARGIN_TOP, MARGIN_LEFT+i*env->cell_size, MARGIN_TOP+DIMENSION*env->cell_size);
     }
 
     for (int line = 0; line < DIMENSION; line++) {
         for (int column = 0; column < DIMENSION; column++) {
-            piece_size = get_piece_size(game, line, column);
-            if (line == picked_piece_line(game) && column == picked_piece_column(game)) {
-                piece_size = picked_piece_size(game);
+            piece_size = get_piece_size(env->game, line, column);
+            if (line == picked_piece_line(env->game) && column == picked_piece_column(env->game)) {
+                piece_size = picked_piece_size(env->game);
             }
             if (piece_size > NONE) {
-                SDL_QueryTexture(pieces[piece_size-1], NULL, NULL, &rect.w, &rect.h);
-                rect.x = MARGIN_X + CELL_SIZE*column + 10;
-                rect.y = MARGIN_Y + CELL_SIZE*(DIMENSION-1 - line);
-                SDL_RenderCopy(renderer, pieces[piece_size-1], NULL, &rect);
+                rect.x = MARGIN_LEFT + env->cell_size*column;
+                rect.y = MARGIN_TOP + env->cell_size*(DIMENSION-1 - line);
+                rect.w = env->cell_size;
+                rect.h = env->cell_size;
+                SDL_RenderCopy(env->renderer, env->pieces[piece_size-1], NULL, &rect);
 
             }
         }
@@ -173,68 +211,79 @@ void disp_piecesize(SDL_Renderer *renderer, int remaining_piece[]) {
     }
 }
 
-void disp_controls(SDL_Renderer *renderer, board game) {
+void disp_controls(Env *env) {
     for (direction dir = GOAL; dir <= WEST; dir++) {
-        if (is_move_possible(game, dir)) {
-            SDL_RenderCopy(renderer, controls[dir].texture, NULL, &controls[dir].rect);
+        if (is_move_possible(env->game, dir)) {
+            SDL_RenderCopy(env->renderer, env->controls[dir].texture, NULL, &env->controls[dir].rect);
         }
     }
-    if (picked_piece_size(game) != NONE) {
-        SDL_RenderCopy(renderer, controls[5].texture, NULL, &controls[5].rect); // cancel
+    if (picked_piece_size(env->game) != NONE) {
+        SDL_RenderCopy(env->renderer, env->controls[5].texture, NULL, &env->controls[5].rect); // cancel
     }
 }
 
-void init_sdl(SDL_Window **pscreen, SDL_Renderer **prenderer) {
+void init_sdl(Env *env) {
     if(SDL_Init(SDL_INIT_VIDEO) < 0) {fprintf(stderr, "Erreur d'initialisation de la SDL : %s\n", SDL_GetError());}
 
     if(IMG_Init(IMG_INIT_PNG) != IMG_INIT_PNG) fprintf(stderr, "Error: IMG_Init PNG (%s)", IMG_GetError());
 
     if (TTF_Init() < 0) {fprintf(stderr, "Impossible d'initialiser SDL TTF: %s\n", TTF_GetError());}
 
-    *pscreen = SDL_CreateWindow("Ma fenêtre de jeu", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_W, SCREEN_H, SDL_WINDOW_SHOWN);
+    env->window = SDL_CreateWindow("Ma fenêtre de jeu", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_W, SCREEN_H, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
 
-    *prenderer = SDL_CreateRenderer(*pscreen, -1, SDL_RENDERER_PRESENTVSYNC);
+    env->renderer = SDL_CreateRenderer(env->window, -1, SDL_RENDERER_PRESENTVSYNC);
 
-    if (*pscreen == NULL || *prenderer == NULL) {
+    if (env->window == NULL || env->renderer == NULL) {
         printf("Erreur : %s\n", SDL_GetError());
         exit(EXIT_FAILURE);
     }
 
-    init_controls(*prenderer);
-    init_pieces(*prenderer);
-    init_piecesize(*prenderer);
+    init_controls(env);
+    init_pieces(env);
+    init_piecesize(env->renderer);
+    calculate_cell_size(env);
 }
 
-void clean_sdl(SDL_Renderer *renderer) {
+void clean_sdl(Env *env) {
     for (direction i = GOAL; i <= WEST+1; i++) {
-        SDL_DestroyTexture(controls[i].texture);
+        SDL_DestroyTexture(env->controls[i].texture);
     }
 
     for (int i = 1; i <= 3; i++) {
-        SDL_DestroyTexture(pieces[i]);
+        SDL_DestroyTexture(env->pieces[i]);
     }
 
-    SDL_DestroyRenderer(renderer);
-    // SDL_DestroyWindow(screen); TO FIX : pass the screen
+    SDL_DestroyRenderer(env->renderer);
+    SDL_DestroyWindow(env->window);
     IMG_Quit();
     TTF_Quit();
     SDL_Quit();
 }
 
-void disp_message(char *text, TTF_Font *font, SDL_Renderer *renderer) {
+
+void disp_message(Env *env) {
     SDL_Surface *surface;
     SDL_Texture *texture;
     SDL_Rect rect;
     SDL_Color black = {0, 0, 0};
+    nt window_w, tmp;
 
-    surface = TTF_RenderUTF8_Solid(font, text, black);
-    texture = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_GetWindowSize(env->window, &window_w, NULL);
+
+    surface = TTF_RenderUTF8_Solid(env->font, env->message, black);
+    texture = SDL_CreateTextureFromSurface(env->renderer, surface);
 
     SDL_QueryTexture(texture, NULL, NULL, &rect.w, &rect.h);
-    rect.x = SCREEN_W/2 - rect.w/2;
+    if (rect.w > window_w-15) {
+        tmp = rect.w;
+        rect.w = window_w-15;
+        rect.h = rect.h * rect.w/tmp;
+    }
+    rect.x = window_w/2 - rect.w/2;
     rect.y = 50;
-    SDL_RenderCopy(renderer, texture, NULL, &rect);
+    SDL_RenderCopy(env->renderer, texture, NULL, &rect);
 }
+
 
 char * player_name(player this_player) {
     if (this_player == SOUTH_P) {
@@ -370,109 +419,102 @@ void init_game(SDL_Renderer *renderer, board game, player *pcurrent_player) {
 
 }
 
-void choose_piece_to_pick(board game, player player) {
-    SDL_Event event;
-    position clicked;
+bool process_event(Env *env, SDL_Event *event) {
+    position pos_clicked;
+    direction dir_clicked;
 
-    while (true) {
-        SDL_WaitEvent(&event);
-        if (event.type == SDL_QUIT) {
-            quit = true;
-            return;
-        }
-        clicked = position_clicked(event.button.x, event.button.y);
-        if (pick_piece(game, player, clicked.line, clicked.column) == OK) {
-            return;
+    if (event->type == SDL_QUIT) {
+        return true;
+    }
+
+    if (event->type == SDL_WINDOWEVENT) {
+        calculate_cell_size(env);
+        place_controls(env);
+        return false;
+    }
+
+    if (!env->placement_finished) {
+        // TO DO
+        return false;
+    }
+
+    if (get_winner(env->game) != NO_PLAYER) {
+        return false;
+    }
+
+    if (event->type == SDL_MOUSEBUTTONUP && event->button.button == 1) {
+        if (picked_piece_size(env->game) == NONE) { // choose a piece to pick
+            pos_clicked = position_clicked(env, event->button.x, event->button.y);
+            if (pick_piece(env->game, env->current_player, pos_clicked.line, pos_clicked.column) == OK) {
+                return false;
+            }
+        } else { // move
+            dir_clicked = direction_clicked(env, event->button.x, event->button.y);
+            if (dir_clicked == 5) {
+                cancel_step(env->game);
+                return false;
+            }
+            if (dir_clicked != -1 && move_piece(env->game, dir_clicked) == OK) {
+                if (movement_left(env->game) == -1) {
+                    env->current_player = next_player(env->current_player);
+                    sprintf(env->message, "Joueur %s, à ton tour !", player_name(env->current_player));
+                } else {
+                    env->message[0] = 0;
+                }
+                return false;
+            }
         }
     }
+
+    return false;
 }
-
-/* return true if the move is canceled */
-bool wait_for_move(board game) {
-    SDL_Event event;
-    direction clicked;
-
-    while (true) {
-        SDL_WaitEvent(&event);
-        while (event.type != SDL_QUIT && (event.type != SDL_MOUSEBUTTONUP || event.button.button != 1)) {
-            SDL_WaitEvent(&event);
-        }
-        if (event.type == SDL_QUIT) {
-            quit = true;
-            return false;
-        }
-        clicked = direction_clicked(event.button.x, event.button.y);
-        if (clicked == 5) {
-            cancel_step(game);
-            return movement_left(game) == -1;
-        }
-        if (clicked != -1 && move_piece(game, clicked) == OK) {
-            return false;
-        }
-    }
-}
-
-
 
 int main() {
-    SDL_Window *screen;
-    SDL_Renderer *renderer;
-    TTF_Font *font;
-    player current_player;
-    board game = new_game();
-    char message[100];
-    bool move_canceled = false;
+    Env env;
+    SDL_Event event;
+    bool quit = false;
     bool firstround = true;
     srand(time(NULL));
 
-    init_sdl(&screen, &renderer);
+    init_sdl(&env);
 
-    font = TTF_OpenFont("assets/ubuntu.ttf", 30);
-    if (!font) {fprintf(stderr, "TTF_OpenFont: %s\n", TTF_GetError());}
+    env.game = new_game();
+    env.message[0] = 0; // important !
 
-    // place_piece(game, ONE, SOUTH_P, 0);
-    // place_piece(game, THREE, SOUTH_P, 1);
-    // place_piece(game, TWO, SOUTH_P, 2);
-    // place_piece(game, THREE, SOUTH_P, 3);
-    // place_piece(game, ONE, SOUTH_P, 4);
-    // place_piece(game, TWO, SOUTH_P, 5);
+    env.font = TTF_OpenFont("assets/ubuntu.ttf", 30);
+    if (!env.font) {fprintf(stderr, "TTF_OpenFont: %s\n", TTF_GetError());}
 
-    // place_piece(game, ONE, NORTH_P, 0);
-    // place_piece(game, ONE, NORTH_P, 1);
-    // place_piece(game, TWO, NORTH_P, 2);
-    // place_piece(game, TWO, NORTH_P, 3);
-    // place_piece(game, THREE, NORTH_P, 4);
-    // place_piece(game, THREE, NORTH_P, 5);
-    
-    current_player = NORTH_P;
+    random_piece_placement(env.game, SOUTH_P);
+    random_piece_placement(env.game, NORTH_P);
+
+    env.placement_finished = true;
+
+    env.current_player = SOUTH_P;
+    sprintf(env.message, "Joueur %s, à ton tour !", player_name(env.current_player));
 
     while (!quit) {
-        clear_screen(renderer);
+        /* manage events */
+        while (SDL_PollEvent(&event)) {
+            quit = process_event(&env, &event);
+            if(quit) break;
+        }
+
         if (firstround) {
             init_game(renderer, game, &current_player);
             firstround = false;
             clear_screen(renderer);
         }
-        if (movement_left(game) == -1 && !move_canceled && !firstround && !quit) {
-            current_player = next_player(current_player);
-            sprintf(message, "Joueur %s, à ton tour !", player_name(current_player));
-            disp_message(message, font, renderer);
-        }
 
-        disp_board(renderer, game);
-        disp_controls(renderer, game);
-        SDL_RenderPresent(renderer);
+        clear_screen(&env);
+        disp_message(&env);
+        disp_board(&env);
+        disp_controls(&env);
+        SDL_RenderPresent(env.renderer);
 
-
-        if (movement_left(game) == -1 && !quit) {
-            choose_piece_to_pick(game, current_player);
-        } else {
-            move_canceled = wait_for_move(game);
-        }
+        SDL_Delay(DELAY);
     }
-    
 
-    clean_sdl(renderer);
- 
+    clean_sdl(&env);
+
     return EXIT_SUCCESS;
 }
