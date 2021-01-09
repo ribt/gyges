@@ -396,10 +396,6 @@ bool process_event(Env *env, SDL_Event *event) {
         return false;
     }
 
-    if (get_winner(env->game) != NO_PLAYER) {
-        return false;
-    }
-
     if (event->type == SDL_MOUSEBUTTONUP && event->button.button == 1) {
         if (picked_piece_size(env->game) == NONE) {
             choose_piece_to_pick(env, event);
@@ -426,6 +422,14 @@ void render(Env *env) {
     SDL_RenderPresent(env->renderer);
 }
 
+void pause() {
+    SDL_Event event;
+    SDL_WaitEvent(&event);
+    while (event.type != SDL_QUIT) {
+        SDL_WaitEvent(&event);
+    }
+}
+
 int main() {
     Env env;
     SDL_Event event;
@@ -437,7 +441,7 @@ int main() {
 
     sprintf(env.message, "Joueur %s, place tes pions !", player_name(env.current_player));
 
-    while (!quit) {
+    while (!quit && get_winner(env.game) == NO_PLAYER) {
         /* manage events */
         while (SDL_PollEvent(&event)) {
             quit = process_event(&env, &event);
@@ -448,6 +452,10 @@ int main() {
 
         SDL_Delay(DELAY);
     }
+
+    sprintf(env.message, "Bravo joueur %s, tu as gagné !", player_name(get_winner(env.game)));
+    render(&env);
+    pause();
 
     clean_sdl(&env);
 
