@@ -214,7 +214,7 @@ void clean_sdl(Env *env) {
     }
 
     SDL_DestroyRenderer(env->renderer);
-    // SDL_DestroyWindow(screen); TO FIX : pass the screen
+    SDL_DestroyWindow(env->window);
     IMG_Quit();
     TTF_Quit();
     SDL_Quit();
@@ -225,7 +225,7 @@ void disp_message(Env *env) {
     SDL_Texture *texture;
     SDL_Rect rect;
     SDL_Color black = {0, 0, 0};
-    int window_w;
+    int window_w, tmp;
 
     SDL_GetWindowSize(env->window, &window_w, NULL);
 
@@ -233,6 +233,11 @@ void disp_message(Env *env) {
     texture = SDL_CreateTextureFromSurface(env->renderer, surface);
 
     SDL_QueryTexture(texture, NULL, NULL, &rect.w, &rect.h);
+    if (rect.w > window_w-15) {
+        tmp = rect.w;
+        rect.w = window_w-15;
+        rect.h = rect.h * rect.w/tmp;
+    }
     rect.x = window_w/2 - rect.w/2;
     rect.y = 50;
     SDL_RenderCopy(env->renderer, texture, NULL, &rect);
@@ -257,8 +262,8 @@ bool process_event(Env *env, SDL_Event *event) {
     }
 
     if (event->type == SDL_WINDOWEVENT) {
-        place_controls(env);
         calculate_cell_size(env);
+        place_controls(env);
         return false;
     }
 
