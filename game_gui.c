@@ -26,7 +26,7 @@ typedef struct {
 } image;
 
 typedef struct {
-    SDL_Window *screen;
+    SDL_Window *window;
     SDL_Renderer *renderer;
     TTF_Font *font;
     SDL_Texture *pieces[3];
@@ -37,8 +37,12 @@ typedef struct {
 bool quit = false;
 
 void place_controls(Env *env) {
-    int mid_x = SCREEN_W - 0.5*MARGIN_RIGHT;
-    int mid_y = (SCREEN_H+MARGIN_TOP/2)/2;
+    int window_w, window_h;
+    int mid_x, mid_y;
+
+    SDL_GetWindowSize(env->window, &window_w, &window_h);
+    mid_x = window_w - 0.5*MARGIN_RIGHT;
+    mid_y = (window_h+MARGIN_TOP/2)/2;
 
     env->controls[SOUTH].rect.x = mid_x - 0.5*env->controls[SOUTH].rect.w;
     env->controls[SOUTH].rect.y = mid_y + 0.5*env->controls[EAST].rect.h;
@@ -104,7 +108,11 @@ direction direction_clicked(Env *env, int x, int y) {
 
 position position_clicked(Env *env, int x, int y) {
     position response = {-1, -1};
-    int cell_size = (SCREEN_W - MARGIN_RIGHT -MARGIN_LEFT)/DIMENSION;
+    int window_w;
+    int cell_size;
+
+    SDL_GetWindowSize(env->window, &window_w, NULL);
+    cell_size = (window_w - MARGIN_RIGHT - MARGIN_LEFT)/DIMENSION;
 
     if (x > MARGIN_LEFT && x < MARGIN_LEFT+DIMENSION*cell_size && y > MARGIN_TOP && y < MARGIN_TOP+DIMENSION*cell_size) {
         response.column = (x-MARGIN_LEFT)/cell_size;
@@ -123,7 +131,11 @@ void clear_screen(Env *env) {
 void disp_board(Env *env, board game) {
     size piece_size;
     SDL_Rect rect;
-    int cell_size = (SCREEN_W - MARGIN_RIGHT -MARGIN_LEFT)/DIMENSION;
+    int window_w;
+    int cell_size;
+
+    SDL_GetWindowSize(env->window, &window_w, NULL);
+    cell_size = (window_w - MARGIN_RIGHT -MARGIN_LEFT)/DIMENSION;
 
     /* draw black lines to make te board */
     SDL_SetRenderDrawColor(env->renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
@@ -167,11 +179,11 @@ void init_sdl(Env *env) {
 
     if (TTF_Init() < 0) {fprintf(stderr, "Impossible d'initialiser SDL TTF: %s\n", TTF_GetError());}
 
-    env->screen = SDL_CreateWindow("Ma fenêtre de jeu", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_W, SCREEN_H, SDL_WINDOW_SHOWN);
+    env->window = SDL_CreateWindow("Ma fenêtre de jeu", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_W, SCREEN_H, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
 
-    env->renderer = SDL_CreateRenderer(env->screen, -1, SDL_RENDERER_PRESENTVSYNC);
+    env->renderer = SDL_CreateRenderer(env->window, -1, SDL_RENDERER_PRESENTVSYNC);
 
-    if (env->screen == NULL || env->renderer == NULL) {
+    if (env->window == NULL || env->renderer == NULL) {
         printf("Erreur : %s\n", SDL_GetError());
         exit(EXIT_FAILURE);
     }
@@ -246,12 +258,15 @@ void disp_message(Env *env, char *text) {
     SDL_Texture *texture;
     SDL_Rect rect;
     SDL_Color black = {0, 0, 0};
+    int window_w;
+
+    SDL_GetWindowSize(env->window, &window_w, NULL);
 
     surface = TTF_RenderUTF8_Solid(env->font, text, black);
     texture = SDL_CreateTextureFromSurface(env->renderer, surface);
 
     SDL_QueryTexture(texture, NULL, NULL, &rect.w, &rect.h);
-    rect.x = SCREEN_W/2 - rect.w/2;
+    rect.x = window_w/2 - rect.w/2;
     rect.y = 50;
     SDL_RenderCopy(env->renderer, texture, NULL, &rect);
 }
