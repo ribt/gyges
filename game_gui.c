@@ -11,11 +11,9 @@
 
 #define SCREEN_W 750
 #define SCREEN_H 600
-#define MARGIN_X 100
-#define MARGIN_Y 120
-#define CELL_SIZE 70
-
-#define DIMENSION 6
+#define MARGIN_LEFT 100
+#define MARGIN_RIGHT 230
+#define MARGIN_TOP 120
 
 typedef struct {
     int line;
@@ -31,36 +29,42 @@ bool quit = false;
 image controls[6]; // 5 directions + cancel
 SDL_Texture * pieces[3]; // 3 sizes
 
+void replace_controls() {
+    int mid_x = SCREEN_W - 0.5*MARGIN_RIGHT;
+    int mid_y = (SCREEN_H+MARGIN_TOP/2)/2;
+
+    controls[SOUTH].rect.x = mid_x - 0.5*controls[SOUTH].rect.w;
+    controls[SOUTH].rect.y = mid_y + 0.5*controls[EAST].rect.h;
+
+    controls[NORTH].rect.x = mid_x - 0.5*controls[NORTH].rect.w;
+    controls[NORTH].rect.y = mid_y - controls[NORTH].rect.h - 0.5*controls[EAST].rect.h;
+
+    controls[EAST].rect.x = mid_x + 0.5*controls[NORTH].rect.w;
+    controls[EAST].rect.y = mid_y - 0.5*controls[EAST].rect.h;
+
+    controls[WEST].rect.x = mid_x - 0.5*controls[NORTH].rect.w - controls[EAST].rect.w;
+    controls[WEST].rect.y = mid_y - 0.5*controls[EAST].rect.h;
+
+    controls[GOAL].rect.x = mid_x - 0.5*controls[GOAL].rect.w;
+    controls[GOAL].rect.y = controls[NORTH].rect.y - 15 - controls[GOAL].rect.h;
+
+    controls[5].rect.x = mid_x - 0.5*controls[5].rect.w;
+    controls[5].rect.y = controls[SOUTH].rect.y + controls[SOUTH].rect.h + 15;
+}
 
 void init_controls(SDL_Renderer *renderer) {
-    controls[GOAL].texture = IMG_LoadTexture(renderer, "assets/win.png");
-    controls[GOAL].rect.x = 580;
-    controls[GOAL].rect.y = 240;
-
     controls[SOUTH].texture = IMG_LoadTexture(renderer, "assets/arrow_s.png");
-    controls[SOUTH].rect.x = 620;
-    controls[SOUTH].rect.y = 410;
-
     controls[NORTH].texture = IMG_LoadTexture(renderer, "assets/arrow_n.png");
-    controls[NORTH].rect.x = 620;
-    controls[NORTH].rect.y = 310;
-
-    controls[EAST].texture = IMG_LoadTexture(renderer, "assets/arrow_e.png");
-    controls[EAST].rect.x = 660;
-    controls[EAST].rect.y = 360;
-
+    controls[EAST].texture = IMG_LoadTexture(renderer, "assets/arrow_e.png");   
     controls[WEST].texture = IMG_LoadTexture(renderer, "assets/arrow_w.png");
-    controls[WEST].rect.x = 570;
-    controls[WEST].rect.y = 360;
-
+    controls[GOAL].texture = IMG_LoadTexture(renderer, "assets/win.png");
     controls[5].texture = IMG_LoadTexture(renderer, "assets/cancel.png");
-    controls[5].rect.x = 585;
-    controls[5].rect.y = 480;
 
     for (int i = 0; i <= 5; i++) {
         if(!controls[i].texture) fprintf(stderr, "IMG_LoadTexture: %s\n", IMG_GetError());
-        SDL_QueryTexture(controls[i].texture, NULL, NULL, &controls[i].rect.w, &controls[i].rect.h); 
+        SDL_QueryTexture(controls[i].texture, NULL, NULL, &controls[i].rect.w, &controls[i].rect.h);
     }
+    replace_controls();
 }
 
 void init_pieces(SDL_Renderer *renderer) {
@@ -93,11 +97,13 @@ direction direction_clicked(int x, int y) {
 
 position position_clicked(int x, int y) {
     position response = {-1, -1};
+    int cell_size = (SCREEN_W - MARGIN_RIGHT -MARGIN_LEFT)/DIMENSION;
 
-    if (x > MARGIN_X && x < MARGIN_X+DIMENSION*CELL_SIZE && y > MARGIN_Y && y < MARGIN_Y+DIMENSION*CELL_SIZE) {
-        response.column = (x-MARGIN_X)/CELL_SIZE;
-        response.line = DIMENSION-1 - (y-MARGIN_Y)/CELL_SIZE;
+    if (x > MARGIN_LEFT && x < MARGIN_LEFT+DIMENSION*cell_size && y > MARGIN_TOP && y < MARGIN_TOP+DIMENSION*cell_size) {
+        response.column = (x-MARGIN_LEFT)/cell_size;
+        response.line = DIMENSION-1 - (y-MARGIN_TOP)/cell_size;
     }
+
     return response;
 }
 
@@ -110,12 +116,13 @@ void clear_screen(SDL_Renderer *renderer) {
 void disp_board(SDL_Renderer *renderer, board game) {
     size piece_size;
     SDL_Rect rect;
+    int cell_size = (SCREEN_W - MARGIN_RIGHT -MARGIN_LEFT)/DIMENSION;
 
     /* draw black lines to make te board */
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
     for (int i = 0; i <= DIMENSION; i++) {
-        SDL_RenderDrawLine(renderer, MARGIN_X, MARGIN_Y+i*CELL_SIZE, MARGIN_X+DIMENSION*CELL_SIZE, MARGIN_Y+i*CELL_SIZE);
-        SDL_RenderDrawLine(renderer, MARGIN_X+i*CELL_SIZE, MARGIN_Y, MARGIN_X+i*CELL_SIZE, MARGIN_Y+DIMENSION*CELL_SIZE);
+        SDL_RenderDrawLine(renderer, MARGIN_LEFT, MARGIN_TOP+i*cell_size, MARGIN_LEFT+DIMENSION*cell_size, MARGIN_TOP+i*cell_size);
+        SDL_RenderDrawLine(renderer, MARGIN_LEFT+i*cell_size, MARGIN_TOP, MARGIN_LEFT+i*cell_size, MARGIN_TOP+DIMENSION*cell_size);
     }
 
     for (int line = 0; line < DIMENSION; line++) {
@@ -126,8 +133,8 @@ void disp_board(SDL_Renderer *renderer, board game) {
             }
             if (piece_size > NONE) {
                 SDL_QueryTexture(pieces[piece_size-1], NULL, NULL, &rect.w, &rect.h);
-                rect.x = MARGIN_X + CELL_SIZE*column + 10;
-                rect.y = MARGIN_Y + CELL_SIZE*(DIMENSION-1 - line);
+                rect.x = MARGIN_LEFT + cell_size*column + 10;
+                rect.y = MARGIN_TOP + cell_size*(DIMENSION-1 - line);
                 SDL_RenderCopy(renderer, pieces[piece_size-1], NULL, &rect);
 
             }
