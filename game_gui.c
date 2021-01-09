@@ -30,7 +30,7 @@ typedef struct {
 
 bool quit = false;
 image controls[6]; // 5 directions + cancel
-image placement_first_piece[3];
+image placement_first_piece[4];
 SDL_Texture * pieces[3]; // 3 sizes
 
 void init_controls(SDL_Renderer *renderer) {
@@ -85,19 +85,19 @@ void init_pieces(SDL_Renderer *renderer) {
 
 void init_piecesize(SDL_Renderer *renderer) {
     placement_first_piece[ONE].texture = IMG_LoadTexture(renderer, "assets/1piece.png");
-    placement_first_piece[ONE].rect.x = 580;
-    placement_first_piece[ONE].rect.y = 240;
+    placement_first_piece[ONE].rect.x = 550;
+    placement_first_piece[ONE].rect.y = 0;
 
 
     placement_first_piece[TWO].texture = IMG_LoadTexture(renderer, "assets/2piece.png");
-    placement_first_piece[TWO].rect.x = 620;
-    placement_first_piece[TWO].rect.y = 410;
+    placement_first_piece[TWO].rect.x = 550;
+    placement_first_piece[TWO].rect.y = 200;
 
-    placement_first_piece[THREE].texture = IMG_LoadTexture(renderer, "assets/2piece.png");
-    placement_first_piece[THREE].rect.x = 620;
-    placement_first_piece[THREE].rect.y = 310;
+    placement_first_piece[THREE].texture = IMG_LoadTexture(renderer, "assets/3piece.png");
+    placement_first_piece[THREE].rect.x = 550;
+    placement_first_piece[THREE].rect.y = 400;
 
-    for (int i = 0; i <= 5; i++) {
+    for (int i = 1; i <= 3; i++) {
         if(!placement_first_piece[i].texture) fprintf(stderr, "IMG_LoadTexture: %s\n", IMG_GetError());
         SDL_QueryTexture(placement_first_piece[i].texture, NULL, NULL, &placement_first_piece[i].rect.w, &placement_first_piece[i].rect.h); 
     }
@@ -165,9 +165,11 @@ size size_clicked(int x, int y) {
     return -1;
 }
 
-void disp_piecesize(SDL_Renderer *renderer) {
+void disp_piecesize(SDL_Renderer *renderer, int remaining_piece[]) {
     for (size i = ONE; i <= THREE; i++) {
-        SDL_RenderCopy(renderer, placement_first_piece[i].texture, NULL, &placement_first_piece[i].rect);
+        if (remaining_piece[i-1] > 0) {
+            SDL_RenderCopy(renderer, placement_first_piece[i].texture, NULL, &placement_first_piece[i].rect);
+        }
     }
 }
 
@@ -200,6 +202,7 @@ void init_sdl(SDL_Window **pscreen, SDL_Renderer **prenderer) {
 
     init_controls(*prenderer);
     init_pieces(*prenderer);
+    init_piecesize(*prenderer);
 }
 
 void clean_sdl(SDL_Renderer *renderer) {
@@ -244,15 +247,17 @@ char * player_name(player this_player) {
 }
 
 void init_game(SDL_Renderer *renderer, board game, player *pcurrent_player) {
-    TTF_Font *font;
-    char message[1000];
-    int column;
-    size piece_size;
+    SDL_Event event;
     return_code response;
-
-
+    char message[100];
+    size clicked = 0;
+    int remaining_piece[NB_SIZE];
+    position selected;
+    selected.line = 0;
+    selected.column = 0;
+    int compteur = 0;
+    TTF_Font *font;
     font = TTF_OpenFont("assets/ubuntu.ttf", 30);
-    
     if (!font) {
         fprintf(stderr, "TTF_OpenFont: %s\n", TTF_GetError());
     }
@@ -263,65 +268,106 @@ void init_game(SDL_Renderer *renderer, board game, player *pcurrent_player) {
         *pcurrent_player = SOUTH_P;
     }
 
-    printf("Initialation des variables\n");
+    SDL_Delay(10);
+    clear_screen(renderer);
+    disp_board(renderer, game);
+    disp_piecesize(renderer, remaining_piece);
+    SDL_RenderPresent(renderer);
 
-    SDL_Event event;
+    for (int i = 0; i < NB_PLAYERS; i++) {
+        compteur = 0;
+        for(int j = 0; j < NB_SIZE; j++) {
+            remaining_piece[j] = NB_INITIAL_PIECES;
+        }
+        while(compteur < DIMENSION && !quit) {
 
-    for (int i = 0; i < NB_PLAYERS; i++) {  // do the same for all players (i is never used)
-        column = 0;
-        while (column < DIMENSION) {  // place the pieces column by column
-            printf("Début du while column < DIMENSION\n");
-            disp_piecesize(renderer);
+            clear_screen(renderer);
+            sprintf(message, "Joueur %s veuillez selectionner une piece", player_name(*pcurrent_player));
+            disp_message(message, font, renderer);
+            disp_board(renderer, game);
+            disp_piecesize(renderer, remaining_piece);
             SDL_RenderPresent(renderer);
+
             SDL_WaitEvent(&event);
-                
+            while (event.type != SDL_QUIT && (event.type != SDL_MOUSEBUTTONUP || event.button.button != 1)) {
+                SDL_WaitEvent(&event);
+            }
+            if (event.type == SDL_QUIT) {
+                quit = true;
+            }
+            
+            
+            clicked = size_clicked(event.button.x, event.button.y);
+
+            
+
+            if (clicked == -1 ) {
+                clicked = 0;
+            }
+            if (clicked >= 1) {
+                if (remaining_piece[clicked - 1] == 0) {
+                    clicked = 0;
+                }
+            }
+
+            if (clicked >= 1 && !quit) {
+
+                clear_screen(renderer);
+                sprintf(message, "La piece %d est selectionné !", clicked);
+                disp_message(message, font, renderer);
+                disp_board(renderer, game);
+                disp_piecesize(renderer, remaining_piece);
+                SDL_RenderPresent(renderer);
+
+                SDL_WaitEvent(&event);
                 while (event.type != SDL_QUIT && (event.type != SDL_MOUSEBUTTONUP || event.button.button != 1)) {
                     SDL_WaitEvent(&event);
                 }
-                
+
                 if (event.type == SDL_QUIT) {
                     quit = true;
-                    return;
-                }
-
-                piece_size = size_clicked(event.button.x, event.button.y);
-
-                clear_screen(renderer);
-                sprintf(message, "Joueur %s, veuillez choisir de gauche à droite la taille des pièces", player_name(*pcurrent_player));
-                disp_piecesize(renderer);
-                disp_message(message, font, renderer);
-                disp_board(renderer, game);
-                SDL_RenderPresent(renderer);
-
-                response = place_piece(game, piece_size, *pcurrent_player, column); // != EMPTY because we force the choice of the column
-                    
-                //Problème pour afficher les messsages d'erreur
-                    
-                if (response == PARAM) {
-                    clear_screen(renderer);
-                    printf("PARAM\n");
-                    sprintf(message, "Cette taille de pion n'existe pas.");
-                    disp_message(message, font, renderer);
-                    disp_board(renderer, game);
-                    SDL_RenderPresent(renderer);
                 }
                 
-                if (response == FORBIDDEN) {
-                    clear_screen(renderer);
-                    printf("FORBIDDEN\n");
-                    sprintf(message, "Il ne vous reste plus de pion de cette taille-là.");
+                selected = position_clicked(event.button.x, event.button.y);
+
+                if ((*pcurrent_player == SOUTH_P && selected.line == southmost_occupied_line(game)) || (*pcurrent_player == NORTH_P && selected.line == northmost_occupied_line(game))) {
+                    response = place_piece(game, clicked, *pcurrent_player, selected.column);
+                } else {
+                    response = PARAM;
+                }
+                if (response == OK) {
+                    remaining_piece[clicked-1]-=1;
                     disp_message(message, font, renderer);
                     disp_board(renderer, game);
+                    disp_piecesize(renderer, remaining_piece);
                     SDL_RenderPresent(renderer);
+                    compteur++;
+
+                } else if (response == PARAM) {
+                    clear_screen(renderer);
+                    sprintf(message, "La case n'est pas valide");
+                    disp_message(message, font, renderer);
+                    disp_board(renderer, game);
+                    disp_piecesize(renderer, remaining_piece);
+                    SDL_RenderPresent(renderer);
+                    SDL_Delay(1000);
+
+                } else if (response == EMPTY) {
+                    clear_screen(renderer);
+                    sprintf(message, "Il y a déjà une piece ici");
+                    disp_message(message, font, renderer);
+                    disp_board(renderer, game);
+                    disp_piecesize(renderer, remaining_piece);
+                    SDL_RenderPresent(renderer);
+                    SDL_Delay(1000);
+
                 }
-                
-                if (response == OK) {         
-                    column++;
-                }
+                clicked = 0;
             }
-            
-            *pcurrent_player = next_player(*pcurrent_player);
         }
+        *pcurrent_player = next_player(*pcurrent_player);    
+    }
+
 }
 
 void choose_piece_to_pick(board game, player player) {
@@ -376,7 +422,7 @@ int main() {
     board game = new_game();
     char message[100];
     bool move_canceled = false;
-    boot firstround = true;
+    bool firstround = true;
     srand(time(NULL));
 
     init_sdl(&screen, &renderer);
@@ -384,27 +430,30 @@ int main() {
     font = TTF_OpenFont("assets/ubuntu.ttf", 30);
     if (!font) {fprintf(stderr, "TTF_OpenFont: %s\n", TTF_GetError());}
 
-    /*
-    place_piece(game, ONE, SOUTH_P, 0);
-    place_piece(game, THREE, SOUTH_P, 1);
-    place_piece(game, TWO, SOUTH_P, 2);
-    place_piece(game, THREE, SOUTH_P, 3);
-    place_piece(game, ONE, SOUTH_P, 4);
-    place_piece(game, TWO, SOUTH_P, 5);
+    // place_piece(game, ONE, SOUTH_P, 0);
+    // place_piece(game, THREE, SOUTH_P, 1);
+    // place_piece(game, TWO, SOUTH_P, 2);
+    // place_piece(game, THREE, SOUTH_P, 3);
+    // place_piece(game, ONE, SOUTH_P, 4);
+    // place_piece(game, TWO, SOUTH_P, 5);
 
-    place_piece(game, ONE, NORTH_P, 0);
-    place_piece(game, ONE, NORTH_P, 1);
-    place_piece(game, TWO, NORTH_P, 2);
-    place_piece(game, TWO, NORTH_P, 3);
-    place_piece(game, THREE, NORTH_P, 4);
-    place_piece(game, THREE, NORTH_P, 5);
-    */
-
-    current_player = NORTH_P;
+    // place_piece(game, ONE, NORTH_P, 0);
+    // place_piece(game, ONE, NORTH_P, 1);
+    // place_piece(game, TWO, NORTH_P, 2);
+    // place_piece(game, TWO, NORTH_P, 3);
+    // place_piece(game, THREE, NORTH_P, 4);
+    // place_piece(game, THREE, NORTH_P, 5);
     
+    current_player = NORTH_P;
+
     while (!quit) {
         clear_screen(renderer);
-        if (movement_left(game) == -1 && !move_canceled && !firstround) {
+        if (firstround) {
+            init_game(renderer, game, &current_player);
+            firstround = false;
+            clear_screen(renderer);
+        }
+        if (movement_left(game) == -1 && !move_canceled && !firstround && !quit) {
             current_player = next_player(current_player);
             sprintf(message, "Joueur %s, à ton tour !", player_name(current_player));
             disp_message(message, font, renderer);
@@ -414,12 +463,8 @@ int main() {
         disp_controls(renderer, game);
         SDL_RenderPresent(renderer);
 
-        if (firstround) {
-            init_game(renderer, game, &current_player);
-            firstround = false;
-        }
 
-        if (movement_left(game) == -1) {
+        if (movement_left(game) == -1 && !quit) {
             choose_piece_to_pick(game, current_player);
         } else {
             move_canceled = wait_for_move(game);
