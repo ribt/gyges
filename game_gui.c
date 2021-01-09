@@ -322,10 +322,8 @@ void drag_initial_pieces(Env *env, SDL_Event *event) {
         if (piece_clicked > -1) {
             env->dragging_piece = piece_clicked;
         }
-        return;
     }
-
-    if (env->dragging_piece > -1 && event->type == SDL_MOUSEBUTTONUP && event->button.button == 1) {
+    else if (env->dragging_piece > -1 && event->type == SDL_MOUSEBUTTONUP && event->button.button == 1) {
         pos_clicked = position_clicked(env, event->button.x, event->button.y);
         if ((env->current_player == NORTH_P && pos_clicked.line == DIMENSION-1) || (env->current_player == SOUTH_P && pos_clicked.line == 0)) {
             if (place_piece(env->game, env->initial_pieces[env->dragging_piece].size, env->current_player, pos_clicked.column) == OK) {
@@ -349,17 +347,14 @@ void drag_initial_pieces(Env *env, SDL_Event *event) {
                 }
             }
         }
-        env->dragging_piece = -1;
-        return;          
+        env->dragging_piece = -1;       
     }
 }
 
 void choose_piece_to_pick(Env *env, SDL_Event *event) {
     position pos_clicked = position_clicked(env, event->button.x, event->button.y);
 
-    if (pick_piece(env->game, env->current_player, pos_clicked.line, pos_clicked.column) == OK) {
-        return;
-    }
+    pick_piece(env->game, env->current_player, pos_clicked.line, pos_clicked.column);
 }
 
 void choose_direction(Env *env, SDL_Event *event) {
@@ -367,16 +362,14 @@ void choose_direction(Env *env, SDL_Event *event) {
 
     if (dir_clicked == 5) {
         cancel_step(env->game);
-        return;
     }
-    if (dir_clicked != -1 && move_piece(env->game, dir_clicked) == OK) {
+    else if (dir_clicked != -1 && move_piece(env->game, dir_clicked) == OK) {
         if (movement_left(env->game) == -1) {
             env->current_player = next_player(env->current_player);
             sprintf(env->message, "Joueur %s, à ton tour !", player_name(env->current_player));
         } else {
             env->message[0] = 0;
         }
-        return;
     }
 }
 
@@ -393,17 +386,12 @@ bool process_event(Env *env, SDL_Event *event) {
 
     if (!env->placement_finished) {
         drag_initial_pieces(env, event);
-        return false;
-    }
-
-    if (event->type == SDL_MOUSEBUTTONUP && event->button.button == 1) {
+    } 
+    else if (event->type == SDL_MOUSEBUTTONUP && event->button.button == 1) {
         if (picked_piece_size(env->game) == NONE) {
             choose_piece_to_pick(env, event);
-            return false;
-            
         } else {
             choose_direction(env, event);
-            return false;
         }
     }
 
