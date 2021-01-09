@@ -14,6 +14,7 @@
 #define MARGIN_LEFT 100
 #define MARGIN_RIGHT 230
 #define MARGIN_TOP 120
+#define MARGIN_BOTTOM 20
 #define DELAY 10
 
 typedef struct {
@@ -32,21 +33,19 @@ typedef struct {
     TTF_Font *font;
     SDL_Texture *pieces[3];
     image controls[6];
+    int cell_size;
     board game;
     player current_player;
     bool placement_finished;
     char message[100];
 } Env;
 
-
-bool quit = false;
-
 void place_controls(Env *env) {
     int window_w, window_h;
     int mid_x, mid_y;
 
     SDL_GetWindowSize(env->window, &window_w, &window_h);
-    mid_x = window_w - 0.5*MARGIN_RIGHT;
+    mid_x = MARGIN_LEFT + DIMENSION*env->cell_size + (window_w - MARGIN_LEFT - DIMENSION*env->cell_size)/2;
     mid_y = (window_h+MARGIN_TOP/2)/2;
 
     env->controls[SOUTH].rect.x = mid_x - 0.5*env->controls[SOUTH].rect.w;
@@ -102,6 +101,22 @@ void init_pieces(Env *env) {
     TTF_CloseFont(font);
 }
 
+void calculate_cell_size(Env * env) {
+    int window_w, window_h;
+    int cell_size_w, cell_size_h;
+
+    SDL_GetWindowSize(env->window, &window_w, &window_h);
+
+    cell_size_w = (window_w - MARGIN_RIGHT - MARGIN_LEFT)/DIMENSION;
+    cell_size_h = (window_h - MARGIN_TOP - MARGIN_BOTTOM)/DIMENSION;
+
+    if (cell_size_w < cell_size_h) {
+        env->cell_size = cell_size_w;
+    } else {
+        env->cell_size = cell_size_h;
+    }
+}
+
 direction direction_clicked(Env *env, int x, int y) {
     for (direction i = GOAL; i <= WEST+1; i++) {
         if (x > env->controls[i].rect.x && x < env->controls[i].rect.x+env->controls[i].rect.w && y > env->controls[i].rect.y && y < env->controls[i].rect.y+env->controls[i].rect.h) {
@@ -113,15 +128,10 @@ direction direction_clicked(Env *env, int x, int y) {
 
 position position_clicked(Env *env, int x, int y) {
     position response = {-1, -1};
-    int window_w;
-    int cell_size;
 
-    SDL_GetWindowSize(env->window, &window_w, NULL);
-    cell_size = (window_w - MARGIN_RIGHT - MARGIN_LEFT)/DIMENSION;
-
-    if (x > MARGIN_LEFT && x < MARGIN_LEFT+DIMENSION*cell_size && y > MARGIN_TOP && y < MARGIN_TOP+DIMENSION*cell_size) {
-        response.column = (x-MARGIN_LEFT)/cell_size;
-        response.line = DIMENSION-1 - (y-MARGIN_TOP)/cell_size;
+    if (x > MARGIN_LEFT && x < MARGIN_LEFT+DIMENSION*env->cell_size && y > MARGIN_TOP && y < MARGIN_TOP+DIMENSION*env->cell_size) {
+        response.column = (x-MARGIN_LEFT)/env->cell_size;
+        response.line = DIMENSION-1 - (y-MARGIN_TOP)/env->cell_size;
     }
 
     return response;
@@ -136,17 +146,12 @@ void clear_screen(Env *env) {
 void disp_board(Env *env) {
     size piece_size;
     SDL_Rect rect;
-    int window_w;
-    int cell_size;
-
-    SDL_GetWindowSize(env->window, &window_w, NULL);
-    cell_size = (window_w - MARGIN_RIGHT -MARGIN_LEFT)/DIMENSION;
 
     /* draw black lines to make te board */
     SDL_SetRenderDrawColor(env->renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
     for (int i = 0; i <= DIMENSION; i++) {
-        SDL_RenderDrawLine(env->renderer, MARGIN_LEFT, MARGIN_TOP+i*cell_size, MARGIN_LEFT+DIMENSION*cell_size, MARGIN_TOP+i*cell_size);
-        SDL_RenderDrawLine(env->renderer, MARGIN_LEFT+i*cell_size, MARGIN_TOP, MARGIN_LEFT+i*cell_size, MARGIN_TOP+DIMENSION*cell_size);
+        SDL_RenderDrawLine(env->renderer, MARGIN_LEFT, MARGIN_TOP+i*env->cell_size, MARGIN_LEFT+DIMENSION*env->cell_size, MARGIN_TOP+i*env->cell_size);
+        SDL_RenderDrawLine(env->renderer, MARGIN_LEFT+i*env->cell_size, MARGIN_TOP, MARGIN_LEFT+i*env->cell_size, MARGIN_TOP+DIMENSION*env->cell_size);
     }
 
     for (int line = 0; line < DIMENSION; line++) {
@@ -156,9 +161,10 @@ void disp_board(Env *env) {
                 piece_size = picked_piece_size(env->game);
             }
             if (piece_size > NONE) {
-                SDL_QueryTexture(env->pieces[piece_size-1], NULL, NULL, &rect.w, &rect.h);
-                rect.x = MARGIN_LEFT + cell_size*column + 10;
-                rect.y = MARGIN_TOP + cell_size*(DIMENSION-1 - line);
+                rect.x = MARGIN_LEFT + env->cell_size*column;
+                rect.y = MARGIN_TOP + env->cell_size*(DIMENSION-1 - line);
+                rect.w = env->cell_size;
+                rect.h = env->cell_size;
                 SDL_RenderCopy(env->renderer, env->pieces[piece_size-1], NULL, &rect);
 
             }
@@ -195,6 +201,7 @@ void init_sdl(Env *env) {
 
     init_controls(env);
     init_pieces(env);
+    calculate_cell_size(env);
 }
 
 void clean_sdl(Env *env) {
@@ -251,6 +258,7 @@ bool process_event(Env *env, SDL_Event *event) {
 
     if (event->type == SDL_WINDOWEVENT) {
         place_controls(env);
+        calculate_cell_size(env);
         return false;
     }
 
@@ -293,6 +301,7 @@ bool process_event(Env *env, SDL_Event *event) {
 int main() {
     Env env;
     SDL_Event event;
+    bool quit = false;
 
     init_sdl(&env);
 
