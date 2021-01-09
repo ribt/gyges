@@ -213,51 +213,6 @@ void clean_sdl(Env *env) {
     SDL_Quit();
 }
 
-void choose_piece_to_pick(Env *env, player player) {
-    SDL_Event event;
-    position clicked;
-
-    while (true) {
-        SDL_WaitEvent(&event);
-        while (event.type != SDL_QUIT && (event.type != SDL_MOUSEBUTTONUP || event.button.button != 1)) {
-            SDL_WaitEvent(&event);
-        }
-        if (event.type == SDL_QUIT) {
-            quit = true;
-            return;
-        }
-        clicked = position_clicked(env, event.button.x, event.button.y);
-        if (pick_piece(env->game, player, clicked.line, clicked.column) == OK) {
-            return;
-        }
-    }
-}
-
-/* return true if the move is canceled */
-bool wait_for_move(Env *env) {
-    SDL_Event event;
-    direction clicked;
-
-    while (true) {
-        SDL_WaitEvent(&event);
-        while (event.type != SDL_QUIT && (event.type != SDL_MOUSEBUTTONUP || event.button.button != 1)) {
-            SDL_WaitEvent(&event);
-        }
-        if (event.type == SDL_QUIT) {
-            quit = true;
-            return false;
-        }
-        clicked = direction_clicked(env, event.button.x, event.button.y);
-        if (clicked == 5) {
-            cancel_step(env->game);
-            return movement_left(env->game) == -1;
-        }
-        if (clicked != -1 && move_piece(env->game, clicked) == OK) {
-            return false;
-        }
-    }
-}
-
 void disp_message(Env *env) {
     SDL_Surface *surface;
     SDL_Texture *texture;
@@ -289,8 +244,14 @@ char * player_name(player this_player) {
 bool process_event(Env *env, SDL_Event *event) {
     position pos_clicked;
     direction dir_clicked;
+
     if (event->type == SDL_QUIT) {
         return true;
+    }
+
+    if (event->type == SDL_WINDOWEVENT) {
+        place_controls(env);
+        return false;
     }
 
     if (!env->placement_finished) {
