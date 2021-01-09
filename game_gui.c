@@ -32,7 +32,6 @@ bool quit = false;
 image controls[6]; // 5 directions + cancel
 image placement_first_piece[3];
 SDL_Texture * pieces[3]; // 3 sizes
-bool firstround  = true;
 
 void init_controls(SDL_Renderer *renderer) {
     controls[GOAL].texture = IMG_LoadTexture(renderer, "assets/win.png");
@@ -168,7 +167,7 @@ size size_clicked(int x, int y) {
 
 void disp_piecesize(SDL_Renderer *renderer) {
     for (size i = ONE; i <= THREE; i++) {
-        SDL_RenderCopy(renderer, placement_first_piece[ONE].texture, NULL, &placement_first_piece[ONE].rect);
+        SDL_RenderCopy(renderer, placement_first_piece[i].texture, NULL, &placement_first_piece[i].rect);
     }
 }
 
@@ -251,7 +250,6 @@ void init_game(SDL_Renderer *renderer, board game, player *pcurrent_player) {
     size piece_size;
     return_code response;
 
-    SDL_Event event;
 
     font = TTF_OpenFont("assets/ubuntu.ttf", 30);
     
@@ -267,14 +265,15 @@ void init_game(SDL_Renderer *renderer, board game, player *pcurrent_player) {
 
     printf("Initialation des variables\n");
 
-    while (true) {
-        for (int i = 0; i < NB_PLAYERS; i++) {  // do the same for all players (i is never used)
-            column = 0;
-            while (column < DIMENSION) {  // place the pieces column by column
-                printf("Début du while column < DIMENSION\n");
-                disp_piecesize(renderer);
-                SDL_RenderPresent(renderer);
-                SDL_WaitEvent(&event);
+    SDL_Event event;
+
+    for (int i = 0; i < NB_PLAYERS; i++) {  // do the same for all players (i is never used)
+        column = 0;
+        while (column < DIMENSION) {  // place the pieces column by column
+            printf("Début du while column < DIMENSION\n");
+            disp_piecesize(renderer);
+            SDL_RenderPresent(renderer);
+            SDL_WaitEvent(&event);
                 
                 while (event.type != SDL_QUIT && (event.type != SDL_MOUSEBUTTONUP || event.button.button != 1)) {
                     SDL_WaitEvent(&event);
@@ -288,13 +287,11 @@ void init_game(SDL_Renderer *renderer, board game, player *pcurrent_player) {
                 piece_size = size_clicked(event.button.x, event.button.y);
 
                 clear_screen(renderer);
-                sprintf(message, "Joueur %s, veuillez choisir de gauche à droite la taille des pièces à mettre sur votre première ligne.", player_name(*pcurrent_player));
+                sprintf(message, "Joueur %s, veuillez choisir de gauche à droite la taille des pièces", player_name(*pcurrent_player));
                 disp_piecesize(renderer);
                 disp_message(message, font, renderer);
                 disp_board(renderer, game);
                 SDL_RenderPresent(renderer);
-
-                piece_size = size_clicked(event.button.x, event.button.y);
 
                 response = place_piece(game, piece_size, *pcurrent_player, column); // != EMPTY because we force the choice of the column
                     
@@ -325,7 +322,6 @@ void init_game(SDL_Renderer *renderer, board game, player *pcurrent_player) {
             
             *pcurrent_player = next_player(*pcurrent_player);
         }
-    }
 }
 
 void choose_piece_to_pick(board game, player player) {
@@ -380,7 +376,7 @@ int main() {
     board game = new_game();
     char message[100];
     bool move_canceled = false;
-
+    boot firstround = true;
     srand(time(NULL));
 
     init_sdl(&screen, &renderer);
