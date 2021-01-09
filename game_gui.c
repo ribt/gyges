@@ -315,6 +315,7 @@ char * player_name(player this_player) {
 void drag_initial_pieces(Env *env, SDL_Event *event) {
     int piece_clicked;
     position pos_clicked;
+    bool done;
 
     if (event->type == SDL_MOUSEBUTTONDOWN && event->button.button == 1) {
         piece_clicked = initial_piece_clicked(env, event->button.x, event->button.y);
@@ -329,6 +330,23 @@ void drag_initial_pieces(Env *env, SDL_Event *event) {
         if ((env->current_player == NORTH_P && pos_clicked.line == DIMENSION-1) || (env->current_player == SOUTH_P && pos_clicked.line == 0)) {
             if (place_piece(env->game, env->initial_pieces[env->dragging_piece].size, env->current_player, pos_clicked.column) == OK) {
                 env->initial_pieces[env->dragging_piece].size = NONE;
+
+                done = true;
+                for (int i = 0; i < DIMENSION; i++) {
+                    if (env->initial_pieces[i].size != NONE) {
+                        done = false;
+                    }
+                }
+                if (done) {
+                    env->current_player = next_player(env->current_player);
+                    if (nb_pieces_available(env->game, ONE, env->current_player) == 0) {
+                        env->placement_finished = true;
+                        sprintf(env->message, "Joueur %s, à toi de commencer à jouer !", player_name(env->current_player));
+                    } else {
+                        place_initial_pieces(env);
+                        sprintf(env->message, "Joueur %s, place tes pions.", player_name(env->current_player));
+                    }
+                }
             }
         }
         env->dragging_piece = -1;
@@ -417,7 +435,7 @@ int main() {
 
     initialisation(&env);
 
-    sprintf(env.message, "Joueur %s, place tes pièces !", player_name(env.current_player));
+    sprintf(env.message, "Joueur %s, place tes pions !", player_name(env.current_player));
 
     while (!quit) {
         /* manage events */
