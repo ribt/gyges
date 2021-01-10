@@ -215,7 +215,6 @@ void disp_initial_pieces(Env *env) {
             SDL_RenderCopy(env->renderer, env->pieces[env->initial_pieces[i].size-1], NULL, &env->initial_pieces[i].rect);
         }
     }
-
 }
 
 void disp_controls(Env *env) {
@@ -314,8 +313,13 @@ void disp_message(Env *env) {
         rect.w = window_w-15;
         rect.h = rect.h * rect.w/tmp;
     }
+    if (rect.h > MARGIN_TOP) {
+        tmp = rect.h;
+        rect.h = MARGIN_TOP-10;
+        rect.w = rect.w * rect.h/tmp;
+    }
     rect.x = window_w/2 - rect.w/2;
-    rect.y = 50;
+    rect.y = MARGIN_TOP/2 - rect.h/2;
     SDL_RenderCopy(env->renderer, texture, NULL, &rect);
 }
 
