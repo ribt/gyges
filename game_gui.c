@@ -34,6 +34,8 @@ typedef struct {
     SDL_Window *window;
     SDL_Renderer *renderer;
     TTF_Font *font;
+    TTF_Font *font_title;
+    TTF_Font *font_subtitle;
     enum stage disp_stage;
     SDL_Texture *pieces[3];
     struct sprite controls[6];
@@ -72,6 +74,10 @@ void place_controls(Env *env) {
 
     env->controls[5].rect.x = mid_x - 0.5*env->controls[5].rect.w;
     env->controls[5].rect.y = env->controls[SOUTH].rect.y + env->controls[SOUTH].rect.h + 15;
+}
+
+void init_background(Env *env) {
+    env->background = IMG_LoadTexture(env->renderer, "assets/backgroundmenu.png");
 }
 
 void init_controls(Env *env) {
@@ -253,7 +259,11 @@ Env *create_env() {
     env->game = new_game();
     env->message[0] = 0; // message = ""
     env->font = TTF_OpenFont("assets/ubuntu.ttf", 30);
+    env->font_title = TTF_OpenFont("assets/ubuntu.ttf", 70);
+    env->font_subtitle = TTF_OpenFont("assets/ubuntu.ttf", 50);
     if (!env->font) {fprintf(stderr, "TTF_OpenFont: %s\n", TTF_GetError());}
+    if (!env->font_title) {fprintf(stderr, "TTF_OpenFont : %s\n", TTF_GetError());}
+    if (!env->font_subtitle) {fprintf(stderr, "TTF_OpenFont : %s\n", TTF_GetError());}
 
     env->disp_stage = PLACEMENT;
     env->dragging_piece = -1;
@@ -491,6 +501,103 @@ void pause() {
     }
 }
 
+bool main_menu(Env *env) {
+    SDL_Event event;
+    bool quit = false;
+    SDL_Color black = {0, 0, 0};
+    int window_w, window_h, tmp;
+    
+    SDL_Surface *surface_title;
+    SDL_Texture *texture_title;
+    char title[30];
+    SDL_Rect rect_title;
+
+    SDL_Surface *surface_pvp;
+    SDL_Texture *texture_pvp;
+    char pvp[30];
+    SDL_Rect rect_pvp;
+
+    SDL_Surface *surface_pvc;
+    SDL_Texture *texture_pvc;
+    char pvc[30];
+    SDL_Rect rect_pvc;
+
+    sprintf(title, "Bienvenue sur le gyges !");
+    surface_title = TTF_RenderUTF8_Solid(env->font_title, title, black);
+    texture_title = SDL_CreateTextureFromSurface(env->renderer, surface_title);
+
+    sprintf(pvp, "Contre un joueur local");
+    surface_pvp = TTF_RenderUTF8_Solid(env->font_subtitle, pvp, black);
+    texture_pvp = SDL_CreateTextureFromSurface(env->renderer, surface_pvp);
+
+    sprintf(pvc, "Contre l'ordinateur");
+    surface_pvc = TTF_RenderUTF8_Solid(env->font_subtitle, pvc, black);
+    texture_pvc = SDL_CreateTextureFromSurface(env->renderer, surface_pvc);
+
+    //Font en bois
+    //Texte centré et gros : "Bienvenue sur le gyges ! Veuillez choisir si vous voulez affronter un bot ou un joueur !"
+    //Texte centré et moyen : "Affronter un joueur"
+    //Texte centré et moyen : "Affronter un bot"
+    //Si veut jouer contre un bot 
+    //|-> Autre fenêtre :
+                        //Texte centré et gros : "Quel niveau de difficulté ?"
+                        //Texte centré et moyen : Facile
+                        //Texte centré et moyen : Moyen
+                        //Texte centré et moyen : Difficile
+    //En haut à gauche logo Retour
+    while(!quit) {
+        SDL_GetWindowSize(env->window, &window_w, &window_h);
+        
+        
+        SDL_QueryTexture(texture_title, NULL, NULL, &rect_title.w, &rect_title.h);
+        if (rect_title.w > window_w-15) {
+            tmp = rect_title.w;
+            rect_title.w = window_w-15;
+            rect_title.h = rect_title.h * rect_title.w/tmp;
+        }
+        rect_title.x = window_w/2 - rect_title.w/2;
+        rect_title.y = window_h/8;
+
+        SDL_QueryTexture(texture_pvp, NULL, NULL, &rect_pvp.w, &rect_pvp.h);
+        if (rect_pvp.w > window_w-15) {
+            tmp = rect_pvp.w;
+            rect_pvp.w = window_w-15;
+            rect_pvp.h = rect_pvp.h * rect_pvp.w/tmp;
+        }
+        rect_pvp.x = window_w/20;
+        rect_pvp.y = window_h/2;
+
+        SDL_QueryTexture(texture_pvc, NULL, NULL, &rect_pvc.w, &rect_pvc.h);
+        if (rect_pvc.w > window_w-15) {
+            tmp = rect_pvc.w;
+            rect_pvc.w = window_w-15;
+            rect_pvc.h = rect_pvc.h * rect_pvc.w/tmp;
+        }
+        rect_pvc.x = window_w/20;
+        rect_pvc.y = window_h/2 + window_h/10;
+
+
+
+        SDL_RenderCopy(env->renderer, env->background, NULL, NULL);
+        SDL_RenderCopy(env->renderer, texture_title, NULL, &rect_title);
+        SDL_RenderCopy(env->renderer, texture_pvp, NULL, &rect_pvp);
+        SDL_RenderCopy(env->renderer, texture_pvc, NULL, &rect_pvc);
+        SDL_RenderPresent(env->renderer);
+
+        SDL_WaitEvent(&event);
+
+        if (event.type == SDL_QUIT) {
+            return true;
+        }
+
+        SDL_Delay(DELAY);
+    }
+
+    return false;
+
+
+}
+
 int main() {
     Env *env;
     SDL_Event event;
@@ -499,8 +606,10 @@ int main() {
     srand(time(NULL));
 
     env = create_env();
-
+  
     sprintf(env->message, "%s, place tes pions !", player_name(env, env->current_player));
+
+    quit = main_menu(&env);
 
     while (!quit && get_winner(env->game) == NO_PLAYER) {
         /* manage events */
