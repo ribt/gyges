@@ -90,6 +90,12 @@ void init_controls(Env *env) {
     place_controls(env);
 }
 
+void enable_initial_pieces(Env *env) {
+    for (int i = 0; i< DIMENSION; i++) {
+        env->initial_pieces[i].size = i/2 + 1;
+    }
+}
+
 void place_initial_pieces(Env *env) {
     int window_w, window_h;
 
@@ -283,22 +289,14 @@ void start_game(Env *env) {
     env->game = new_game();
     env->disp_stage = PLACEMENT;
 
-#ifdef DEBUG
-    env->BOT_P = NORTH_P;
-    random_piece_placement(env->game, SOUTH_P);
-    random_piece_placement(env->game, NORTH_P);
-    env->disp_stage = INGAME;
-    env->current_player = SOUTH_P;
-#else
     if (rand()%2 == 0) {  // random choice of the first player
         env->current_player = NORTH_P;
     } else {
         env->current_player = SOUTH_P;
     }
-#endif
 
-    for (int i = 0; i< DIMENSION; i++) {
-        env->initial_pieces[i].size = i/2 + 1;
+    if (env->current_player != env->BOT_P) {
+        enable_initial_pieces(env);
     }
 
     sprintf(env->message, "%s, place tes pions !", player_name(env, env->current_player));
@@ -329,6 +327,8 @@ Env *create_env() {
     env->dragging_piece = -1;
 
     // env->disp_stage = CONFIG;
+
+    env->BOT_P = NORTH_P;
 
     start_game(env); // TO DO: uncomment previous line and call start_game() when the configuration is done
 
@@ -418,9 +418,7 @@ void drag_initial_pieces(Env *env, SDL_Event *event) {
                     } else {
                         place_initial_pieces(env);
                         sprintf(env->message, "%s, place tes pions.", player_name(env, env->current_player));
-                        for (int i = 0; i< DIMENSION; i++) {
-                            env->initial_pieces[i].size = i/2 + 1;
-                        }
+                        enable_initial_pieces(env);
                     }
                 }
             }
@@ -450,6 +448,7 @@ void choose_direction(Env *env, SDL_Event *event) {
                 sprintf(env->message, "À ton tour %s", player_name(env, env->current_player));
             } else {
                 env->disp_stage = END;
+                env->current_player = NO_PLAYER;
                 sprintf(env->message, "Victoire du %s !", player_name(env, env->current_player));
             }
         } else {
@@ -518,6 +517,19 @@ void play_as_bot(Env *env) {
     if (env->BOT_P == NO_PLAYER) {
         return;
     }
+    if (env->disp_stage == PLACEMENT) {
+        random_piece_placement(env->game, env->BOT_P);
+        env->current_player = next_player(env->current_player);
+        if (nb_pieces_available(env->game, ONE, env->current_player) == 0) {
+            env->disp_stage = INGAME;
+            sprintf(env->message, "%s, à toi de commencer à jouer !", player_name(env, env->current_player));
+        } else {
+            place_initial_pieces(env);
+            sprintf(env->message, "%s, place tes pions.", player_name(env, env->current_player));
+            enable_initial_pieces(env);
+        }
+        return;
+    }
     if (picked_piece_size(env->game) == NONE) {
         env->bot_move = bot_move(env->game, env->BOT_P);
         pick_piece(env->game, env->BOT_P, env->bot_move.piece.line, env->bot_move.piece.column);
@@ -534,6 +546,7 @@ void play_as_bot(Env *env) {
                 sprintf(env->message, "À ton tour %s", player_name(env, env->current_player));
             } else {
                 env->disp_stage = END;
+                env->current_player = NO_PLAYER;
                 sprintf(env->message, "Victoire du %s !", player_name(env, env->current_player));
             }
         }
@@ -591,8 +604,6 @@ int main() {
 
         if (env->current_player == env->BOT_P) {
             play_as_bot(env);
-        } else {
-            SDL_Delay(DELAY);
         }
     }
 
