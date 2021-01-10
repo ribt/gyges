@@ -34,8 +34,11 @@ typedef struct {
     SDL_Window *window;
     SDL_Renderer *renderer;
     TTF_Font *font;
+<<<<<<< HEAD
     TTF_Font *font_title;
     TTF_Font *font_subtitle;
+=======
+>>>>>>> origin/ribt
     enum stage disp_stage;
     SDL_Texture *pieces[3];
     struct sprite controls[6];
@@ -606,10 +609,15 @@ int main() {
     srand(time(NULL));
 
     env = create_env();
+<<<<<<< HEAD
 
     sprintf(env->message, "%s, place tes pions !", player_name(env, env->current_player));
 
     quit = main_menu(&env);
+=======
+
+    sprintf(env->message, "%s, place tes pions !", player_name(env, env->current_player));
+>>>>>>> origin/ribt
 
     while (!quit && get_winner(env->game) == NO_PLAYER) {
         /* manage events */

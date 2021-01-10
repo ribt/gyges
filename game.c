@@ -274,7 +274,7 @@ void gameplay(board game, player *pcurrent_player) {
 	while (get_winner(game) == NO_PLAYER) {
         if (*pcurrent_player == BOT_P) {
             printf("Le bot réfléchit...\n");
-            bot_move(game, BOT_P);
+            disp_move(game, BOT_P, bot_move(game, BOT_P));
             *pcurrent_player = next_player(*pcurrent_player);
             clear_screen();
         } else {

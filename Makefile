@@ -34,8 +34,14 @@ bvb: board.o display_debug.o bot_debug.o bot-versus-bot.c
 gui: board.o bot.o game_gui.o
 	gcc -Wall board.o bot.o game_gui.o -lSDL2 -lSDL2_image -lSDL2_ttf -o gui
 
+gui_debug: board.o bot.o game_gui_debug.o
+	gcc -Wall board.o bot.o game_gui_debug.o -lSDL2 -lSDL2_image -lSDL2_ttf -o gui_debug
+
 game_gui.o: game_gui.c
 	gcc -Wall -c game_gui.c
+
+game_gui_debug.o: game_gui.c
+	gcc -Wall -g -D DEBUG -c game_gui.c -o game_gui_debug.o
 
 
 clean:
