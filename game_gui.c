@@ -19,11 +19,6 @@
 #define DELAY 1
 
 typedef struct {
-    int line;
-    int column;
-} position;
-
-typedef struct {
     SDL_Texture *texture;
     SDL_Rect rect;
 } image;
@@ -96,7 +91,6 @@ void place_initial_pieces(Env *env) {
     SDL_GetWindowSize(env->window, &window_w, &window_h);
 
     for (int i = 0; i< DIMENSION; i++) {
-        env->initial_pieces[i].size = i/2 + 1;
         env->initial_pieces[i].rect.y = MARGIN_TOP + DIMENSION*env->cell_size + 20;
         env->initial_pieces[i].rect.x = 20 + i*(env->initial_pieces[0].rect.w+10);
         env->initial_pieces[i].rect.w = env->cell_size;
@@ -111,6 +105,10 @@ void init_pieces(Env *env) {
 
     for (int i = 0; i < 3; i++) {
         if(!env->pieces[i]) fprintf(stderr, "IMG_LoadTexture: %s\n", IMG_GetError());
+    }
+
+    for (int i = 0; i< DIMENSION; i++) {
+        env->initial_pieces[i].size = i/2 + 1;
     }
 
     place_initial_pieces(env);
@@ -350,6 +348,9 @@ void drag_initial_pieces(Env *env, SDL_Event *event) {
                     } else {
                         place_initial_pieces(env);
                         sprintf(env->message, "Joueur %s, place tes pions.", player_name(env->current_player));
+                        for (int i = 0; i< DIMENSION; i++) {
+                            env->initial_pieces[i].size = i/2 + 1;
+                        }
                     }
                 }
             }
@@ -387,7 +388,11 @@ bool process_event(Env *env, SDL_Event *event) {
 
     if (event->type == SDL_WINDOWEVENT) {
         calculate_cell_size(env);
-        place_controls(env);
+        if (env->placement_finished) {
+            place_controls(env);
+        } else {
+            place_initial_pieces(env);
+        }
         return false;
     }
 
