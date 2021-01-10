@@ -227,7 +227,9 @@ void disp_controls(Env *env) {
     }
 }
 
-void initialisation(Env *env) {
+Env *create_env() {
+    Env *env = malloc(sizeof(Env));
+
     if(SDL_Init(SDL_INIT_VIDEO) < 0) {fprintf(stderr, "Erreur d'initialisation de la SDL : %s\n", SDL_GetError());}
 
     if(IMG_Init(IMG_INIT_PNG) != IMG_INIT_PNG) fprintf(stderr, "Error: IMG_Init PNG (%s)", IMG_GetError());
@@ -260,9 +262,13 @@ void initialisation(Env *env) {
     } else {
         env->current_player = SOUTH_P;
     }
+
+    return env;
 }
 
-void clean_sdl(Env *env) {
+void destroy_env(Env *env) {
+    destroy_game(env->game);
+
     for (direction i = GOAL; i <= WEST+1; i++) {
         SDL_DestroyTexture(env->controls[i].texture);
     }
@@ -276,6 +282,7 @@ void clean_sdl(Env *env) {
     IMG_Quit();
     TTF_Quit();
     SDL_Quit();
+    free(env);
 }
 
 void disp_message(Env *env) {
@@ -419,33 +426,35 @@ void pause() {
 }
 
 int main() {
-    Env env;
+    Env *env;
     SDL_Event event;
     bool quit = false;
 
     srand(time(NULL));
 
-    initialisation(&env);
+    env = create_env();
 
-    sprintf(env.message, "Joueur %s, place tes pions !", player_name(env.current_player));
+    sprintf(env->message, "Joueur %s, place tes pions !", player_name(env->current_player));
 
-    while (!quit && get_winner(env.game) == NO_PLAYER) {
+    while (!quit && get_winner(env->game) == NO_PLAYER) {
         /* manage events */
         while (SDL_PollEvent(&event)) {
-            quit = process_event(&env, &event);
+            quit = process_event(env, &event);
             if(quit) break;
         }
 
-        render(&env);
+        render(env);
 
         SDL_Delay(DELAY);
     }
 
-    sprintf(env.message, "Bravo joueur %s, tu as gagné !", player_name(get_winner(env.game)));
-    render(&env);
-    pause();
+    if (get_winner(env->game) != NO_PLAYER) {
+        sprintf(env->message, "Bravo joueur %s, tu as gagné !", player_name(get_winner(env->game)));
+        render(env);
+        pause();
+    }
 
-    clean_sdl(&env);
+    destroy_env(env);
 
     return EXIT_SUCCESS;
 }
