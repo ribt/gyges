@@ -1,5 +1,9 @@
 #include <stdio.h>
+#include <unistd.h>
 #include "board.h"
+#include "bot.h"
+
+#define PAUSE_MS 750
 
 // the comments describing the functions are in display.h
 
@@ -111,4 +115,22 @@ char * plural(int number) {
     } else {
         return "";
     }
+}
+
+// for the bot: execute and display a move
+void disp_move(board game, player bot, move move) {
+    #ifdef DEBUG
+        clear_screen();
+    #endif
+    disp_board(game);
+    usleep(PAUSE_MS*1000);
+    pick_piece(game, bot, move.piece.line, move.piece.column);
+    for (int i = 0; i < move.path.len; i++) {
+        clear_screen();
+        disp_board(game);
+        usleep(PAUSE_MS*1000);
+        move_piece(game, move.path.directions[i]);
+    }
+    clear_screen();
+    disp_board(game);
 }
