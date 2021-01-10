@@ -18,26 +18,30 @@
 #define MARGIN_BOTTOM 100
 #define DELAY 1
 
-typedef struct {
+struct sprite {
     SDL_Texture *texture;
     SDL_Rect rect;
-} image;
+};
 
 struct available_piece {
     size size;
     SDL_Rect rect;    
 };
 
+enum stage {CONFIG, PLACEMENT, INGAME};
+
 typedef struct {
     SDL_Window *window;
     SDL_Renderer *renderer;
     TTF_Font *font;
+    enum stage disp_stage;
     SDL_Texture *pieces[3];
-    image controls[6];
+    struct sprite controls[6];
     int cell_size;
     board game;
     player current_player;
-    bool placement_finished;
+    player BOT_P;
+    move bot_move;
     int dragging_piece;
     struct available_piece initial_pieces[DIMENSION];
     char message[100];
@@ -252,14 +256,23 @@ Env *create_env() {
     env->font = TTF_OpenFont("assets/ubuntu.ttf", 30);
     if (!env->font) {fprintf(stderr, "TTF_OpenFont: %s\n", TTF_GetError());}
 
-    env->placement_finished = false;
+    env->disp_stage = PLACEMENT;
     env->dragging_piece = -1;
 
+#ifdef DEBUG
+    env->BOT_P = NORTH_P;
+    random_piece_placement(env->game, SOUTH_P);
+    random_piece_placement(env->game, NORTH_P);
+    env->disp_stage = INGAME;
+    env->current_player = SOUTH_P;
+#else
+    env->BOT_P = NO_PLAYER;
     if (rand()%2 == 0) {  // random choice of the first player
         env->current_player = NORTH_P;
     } else {
         env->current_player = SOUTH_P;
     }
+#endif
 
     return env;
 }
@@ -306,15 +319,23 @@ void disp_message(Env *env) {
     SDL_RenderCopy(env->renderer, texture, NULL, &rect);
 }
 
-
-char * player_name(player this_player) {
-    if (this_player == SOUTH_P) {
-        return "SUD";
+char * player_name(Env *env, player this_player) {
+    if (env->BOT_P == NO_PLAYER) {
+        if (this_player == SOUTH_P) {
+            return "Joueur SUD";
+        }
+        if (this_player == NORTH_P) {
+            return "Joueur NORD";
+        }
+    } else {
+        if (this_player == env->BOT_P) {
+            return "Robot";
+        } else {
+            return "Humain";
+        }
     }
-    if (this_player == NORTH_P) {
-        return "NORD";
-    }
-    return "inconnu";
+    
+    return "";
 }
 
 void drag_initial_pieces(Env *env, SDL_Event *event) {
@@ -343,11 +364,11 @@ void drag_initial_pieces(Env *env, SDL_Event *event) {
                 if (done) {
                     env->current_player = next_player(env->current_player);
                     if (nb_pieces_available(env->game, ONE, env->current_player) == 0) {
-                        env->placement_finished = true;
-                        sprintf(env->message, "Joueur %s, à toi de commencer à jouer !", player_name(env->current_player));
+                        env->disp_stage = INGAME;
+                        sprintf(env->message, "%s, à toi de commencer à jouer !", player_name(env, env->current_player));
                     } else {
                         place_initial_pieces(env);
-                        sprintf(env->message, "Joueur %s, place tes pions.", player_name(env->current_player));
+                        sprintf(env->message, "%s, place tes pions.", player_name(env, env->current_player));
                         for (int i = 0; i< DIMENSION; i++) {
                             env->initial_pieces[i].size = i/2 + 1;
                         }
@@ -360,21 +381,23 @@ void drag_initial_pieces(Env *env, SDL_Event *event) {
 }
 
 void choose_piece_to_pick(Env *env, SDL_Event *event) {
-    position pos_clicked = position_clicked(env, event->button.x, event->button.y);
+    position pos_clicked;
 
+    pos_clicked = position_clicked(env, event->button.x, event->button.y);
     pick_piece(env->game, env->current_player, pos_clicked.line, pos_clicked.column);
 }
 
 void choose_direction(Env *env, SDL_Event *event) {
-    direction dir_clicked = direction_clicked(env, event->button.x, event->button.y);
+    direction dir_clicked;
 
+    dir_clicked = direction_clicked(env, event->button.x, event->button.y);
     if (dir_clicked == 5) {
         cancel_step(env->game);
     }
     else if (dir_clicked != -1 && move_piece(env->game, dir_clicked) == OK) {
         if (movement_left(env->game) == -1) {
             env->current_player = next_player(env->current_player);
-            sprintf(env->message, "Joueur %s, à ton tour !", player_name(env->current_player));
+            sprintf(env->message, "À ton tour %s", player_name(env, env->current_player));
         } else {
             env->message[0] = 0;
         }
@@ -387,19 +410,24 @@ bool process_event(Env *env, SDL_Event *event) {
     }
 
     if (event->type == SDL_WINDOWEVENT) {
-        calculate_cell_size(env);
-        if (env->placement_finished) {
-            place_controls(env);
+        if (env->disp_stage == CONFIG) {
+            // TO DO
         } else {
-            place_initial_pieces(env);
+            calculate_cell_size(env);
+            if (env->disp_stage == PLACEMENT) {
+                place_initial_pieces(env);
+            } else if (env->disp_stage == INGAME) {
+                place_controls(env);
+            }
         }
         return false;
     }
 
-    if (!env->placement_finished) {
+    if (env->disp_stage == PLACEMENT) {
         drag_initial_pieces(env, event);
     } 
-    else if (event->type == SDL_MOUSEBUTTONUP && event->button.button == 1) {
+    
+    if (env->disp_stage == INGAME && event->type == SDL_MOUSEBUTTONUP && event->button.button == 1) {
         if (picked_piece_size(env->game) == NONE) {
             choose_piece_to_pick(env, event);
         } else {
@@ -410,14 +438,43 @@ bool process_event(Env *env, SDL_Event *event) {
     return false;
 }
 
+void play_as_bot(Env *env) {
+    int i;
+
+    if (env->BOT_P == NO_PLAYER) {
+        return;
+    }
+    if (picked_piece_size(env->game) == NONE) {
+        env->bot_move = bot_move(env->game, env->BOT_P);
+        pick_piece(env->game, env->BOT_P, env->bot_move.piece.line, env->bot_move.piece.column);
+    } else {
+        i = 0;
+        while (i < env->bot_move.path.len && env->bot_move.path.directions[i] == -1) {
+            i++;
+        }
+        move_piece(env->game, env->bot_move.path.directions[i]);
+        env->bot_move.path.directions[i] = -1;
+        if (movement_left(env->game) == -1) {
+            env->current_player = next_player(env->current_player);
+            sprintf(env->message, "À ton tour %s", player_name(env, env->current_player));
+        }
+    }
+}
+
 void render(Env *env) {
     clear_screen(env);
-    disp_message(env);
-    disp_board(env);
-    if (env->placement_finished) {
-        disp_controls(env);
+    if (env->disp_stage == CONFIG) {
+        // TO DO
     } else {
-        disp_initial_pieces(env);
+        disp_message(env);
+        disp_board(env);
+        if (env->disp_stage == PLACEMENT) {
+            disp_initial_pieces(env);
+        } else if (env->disp_stage == INGAME) {
+            if (env->current_player != env->BOT_P) {
+                disp_controls(env);       
+            }
+        }
     }
     SDL_RenderPresent(env->renderer);
 }
@@ -439,7 +496,7 @@ int main() {
 
     env = create_env();
 
-    sprintf(env->message, "Joueur %s, place tes pions !", player_name(env->current_player));
+    sprintf(env->message, "%s, place tes pions !", player_name(env, env->current_player));
 
     while (!quit && get_winner(env->game) == NO_PLAYER) {
         /* manage events */
@@ -450,11 +507,16 @@ int main() {
 
         render(env);
 
-        SDL_Delay(DELAY);
+        if (env->current_player == env->BOT_P) {
+            play_as_bot(env);
+            SDL_Delay(1000);
+        } else {
+            SDL_Delay(DELAY);
+        }
     }
 
     if (get_winner(env->game) != NO_PLAYER) {
-        sprintf(env->message, "Bravo joueur %s, tu as gagné !", player_name(get_winner(env->game)));
+        sprintf(env->message, "Bravo %s, tu as gagné !", player_name(env, get_winner(env->game)));
         render(env);
         pause();
     }
