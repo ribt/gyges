@@ -606,7 +606,7 @@ int main() {
     srand(time(NULL));
 
     env = create_env();
-
+  
     sprintf(env->message, "%s, place tes pions !", player_name(env, env->current_player));
 
     quit = main_menu(&env);
