@@ -159,7 +159,7 @@ void place_menu_buttons(Env *env) {
     env->menu_buttons[4].rect.x = env->menu_buttons[3].rect.x + env->menu_buttons[3].rect.w + window_h/10;       //MEDUIM
     env->menu_buttons[4].rect.y = env->menu_buttons[2].rect.y + env->menu_buttons[2].rect.h;
 
-    env->menu_buttons[5].rect.x = env->menu_buttons[4].rect.x + env->menu_buttons[4].rect.w + window_h/10;       //MEDUIM
+    env->menu_buttons[5].rect.x = env->menu_buttons[4].rect.x + env->menu_buttons[4].rect.w + window_h/10;       //HARD
     env->menu_buttons[5].rect.y = env->menu_buttons[2].rect.y + env->menu_buttons[2].rect.h;
 
 }
@@ -349,7 +349,7 @@ void disp_sprites(Env *env, struct sprite sprites[], int len) {
 
 void start_game(Env *env) {
     env->game = new_game();
-    env->disp_stage = CONFIG;
+    env->disp_stage = PLACEMENT;
 
     if (rand()%2 == 0) {  // random choice of the first player
         env->current_player = NORTH_P;
@@ -389,9 +389,6 @@ Env *create_env() {
     env->dragging_piece = -1;
 
     env->disp_stage = CONFIG;
-
-    start_game(env); 
-
 
     calculate_cell_size(env);
     init_controls(env);
@@ -535,27 +532,18 @@ void choose_direction(Env *env, SDL_Event *event) {
 void menu_choices(Env *env, SDL_Event *event) {
     int button_clicked = sprite_clicked(event->button.x, event->button.y, env->menu_buttons, 6);
 
-    if (button_clicked == 1) {
-        start_game(env);
-        env->disp_stage = PLACEMENT;
-        printf("PVP\n");
-    } else if (button_clicked == 3) {
-        env->BOT_P = NORTH_P;
-        set_difficulty(EASY);
-        start_game(env);
-        env->disp_stage = PLACEMENT;
-    } else if (button_clicked == 4) {
-        env->BOT_P = NORTH_P;
-        set_difficulty(MEDIUM);
-        start_game(env);
-        env->disp_stage = PLACEMENT;
-    } else if (button_clicked == 5) {
-        env->BOT_P = NORTH_P;
-        set_difficulty(HARD);
-        start_game(env);
-        env->disp_stage = PLACEMENT;
+    if (button_clicked <= 0 || button_clicked == 2) {
+        return;
     }
 
+    if (button_clicked >= 3 && button_clicked <= 5) {
+        env->BOT_P = NORTH_P;
+        set_difficulty(button_clicked-3);
+    } else {
+        env->BOT_P = NO_PLAYER;
+    }
+
+    start_game(env);
 }
 
 bool end_choices(Env *env, SDL_Event *event) {
