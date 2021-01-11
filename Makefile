@@ -45,4 +45,4 @@ game_gui_debug.o: game_gui.c
 
 
 clean:
-	rm -f *.o gyges gyges_debug bvb test gui
+	rm -f *.o gyges gyges_debug bvb test
