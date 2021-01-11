@@ -34,11 +34,14 @@ typedef struct {
     SDL_Window *window;
     SDL_Renderer *renderer;
     TTF_Font *font;
+    TTF_Font *font_title;
+    TTF_Font *font_subtitle;
     enum stage disp_stage;
     SDL_Texture *pieces[3];
     struct sprite controls[6];
     int cell_size;
     board game;
+    SDL_Texture *background;
     player current_player;
     player BOT_P;
     move bot_move;
@@ -46,6 +49,7 @@ typedef struct {
     struct available_piece initial_pieces[DIMENSION];
     char message[100];
     struct sprite end_buttons[3];
+    struct sprite menu_buttons[6];
 } Env;
 
 void place_controls(Env *env) {
@@ -109,6 +113,7 @@ void place_initial_pieces(Env *env) {
     }
 }
 
+
 void init_pieces(Env *env) {
     env->pieces[0] = IMG_LoadTexture(env->renderer, "assets/1piece.png");
     env->pieces[1] = IMG_LoadTexture(env->renderer, "assets/2piece.png");
@@ -136,6 +141,31 @@ void place_end_buttons(Env *env) {
     env->end_buttons[2].rect.y = env->end_buttons[1].rect.y + env->end_buttons[1].rect.h + 10;
 }
 
+void place_menu_buttons(Env *env) {
+    int window_w, window_h;
+
+    SDL_GetWindowSize(env->window, &window_w, &window_h);
+
+    env->menu_buttons[0].rect.x = window_w/2 - env->menu_buttons[0].rect.w/2;       //TITLE
+    env->menu_buttons[0].rect.y = window_h/8;
+
+    env->menu_buttons[1].rect.x = env->menu_buttons[1].rect.w/8;       //PVP
+    env->menu_buttons[1].rect.y = window_h/2;
+
+    env->menu_buttons[2].rect.x = env->menu_buttons[1].rect.x;       //PVC
+    env->menu_buttons[2].rect.y = window_h/2 + window_h/10;
+
+    env->menu_buttons[3].rect.x = env->menu_buttons[1].rect.x - env->menu_buttons[3].rect.w/8;       //EZ
+    env->menu_buttons[3].rect.y = env->menu_buttons[2].rect.y + env->menu_buttons[2].rect.h;
+
+    env->menu_buttons[4].rect.x = env->menu_buttons[3].rect.x + env->menu_buttons[3].rect.w + window_h/10;       //MEDUIM
+    env->menu_buttons[4].rect.y = env->menu_buttons[2].rect.y + env->menu_buttons[2].rect.h;
+
+    env->menu_buttons[5].rect.x = env->menu_buttons[4].rect.x + env->menu_buttons[4].rect.w + window_h/10;       //MEDUIM
+    env->menu_buttons[5].rect.y = env->menu_buttons[2].rect.y + env->menu_buttons[2].rect.h;
+
+}
+
 void init_end_buttons(Env *env) {
     SDL_Color black = {0, 0, 0};
 
@@ -148,6 +178,26 @@ void init_end_buttons(Env *env) {
     }
 
     place_end_buttons(env);
+}
+
+void init_menu_buttons(Env *env) {
+    SDL_Color black = {0, 0, 0};
+    SDL_Color red = {165, 0, 0};
+    SDL_Color green = {0, 165, 0};
+
+    env->menu_buttons[0].texture = SDL_CreateTextureFromSurface(env->renderer, TTF_RenderUTF8_Solid(env->font_title, "Gyges", black));
+    env->menu_buttons[1].texture = SDL_CreateTextureFromSurface(env->renderer, TTF_RenderUTF8_Solid(env->font_subtitle, "Contre un autre joueur local", black));
+    env->menu_buttons[2].texture = SDL_CreateTextureFromSurface(env->renderer, TTF_RenderUTF8_Solid(env->font_subtitle, "Contre l'ordinateur :", black));
+    env->menu_buttons[3].texture = SDL_CreateTextureFromSurface(env->renderer, TTF_RenderUTF8_Solid(env->font_subtitle, "- Facile", green));
+    env->menu_buttons[4].texture = SDL_CreateTextureFromSurface(env->renderer, TTF_RenderUTF8_Solid(env->font_subtitle, "- Moyen", black));
+    env->menu_buttons[5].texture = SDL_CreateTextureFromSurface(env->renderer, TTF_RenderUTF8_Solid(env->font_subtitle, "- Difficile", red));
+
+
+    for (int i = 0; i < 6; i++) {
+        SDL_QueryTexture(env->menu_buttons[i].texture, NULL, NULL, &env->menu_buttons[i].rect.w, &env->menu_buttons[i].rect.h);
+    }
+
+    place_menu_buttons(env);
 }
 
 char *player_name(Env *env, player this_player) {
@@ -217,8 +267,15 @@ int initial_piece_clicked(Env *env, int x, int y) {
 
 void clear_screen(Env *env) {
     /* background in gray */
-    SDL_SetRenderDrawColor(env->renderer, 160, 160, 160, 255); 
-    SDL_RenderClear(env->renderer);
+    SDL_RenderCopy(env->renderer, env->background, NULL, NULL);
+    //SDL_SetRenderDrawColor(env->renderer, 160, 160, 160, 255); 
+    //SDL_RenderClear(env->renderer);
+}
+
+void init_background(Env *env) {
+    env->background = IMG_LoadTexture(env->renderer, "assets/background.png");
+
+    if(!env->background) fprintf(stderr, "IMG_LoadTexture: %s\n", IMG_GetError());
 }
 
 void disp_board(Env *env) {
@@ -287,7 +344,7 @@ void disp_sprites(Env *env, struct sprite sprites[], int len) {
 
 void start_game(Env *env) {
     env->game = new_game();
-    env->disp_stage = PLACEMENT;
+    env->disp_stage = CONFIG;
 
     if (rand()%2 == 0) {  // random choice of the first player
         env->current_player = NORTH_P;
@@ -324,17 +381,25 @@ Env *create_env() {
     env->font = TTF_OpenFont("assets/ubuntu.ttf", 30);
     if (!env->font) {fprintf(stderr, "TTF_OpenFont: %s\n", TTF_GetError());}
 
+    env->font_title = TTF_OpenFont("assets/ubuntu.ttf", 100);
+    if (!env->font_title) {fprintf(stderr, "TTF_OpenFont: %s\n", TTF_GetError());}
+
+
+    env->font_subtitle = TTF_OpenFont("assets/ubuntu.ttf", 50);
+    if (!env->font_subtitle) {fprintf(stderr, "TTF_OpenFont: %s\n", TTF_GetError());}
+
     env->dragging_piece = -1;
 
-    // env->disp_stage = CONFIG;
+    env->disp_stage = CONFIG;
 
-    env->BOT_P = NORTH_P;
+    start_game(env); 
 
-    start_game(env); // TO DO: uncomment previous line and call start_game() when the configuration is done
 
     calculate_cell_size(env);
     init_controls(env);
     init_pieces(env);
+    init_background(env);
+    init_menu_buttons(env);
     init_end_buttons(env);
 
     return env;
@@ -351,6 +416,16 @@ void destroy_env(Env *env) {
         SDL_DestroyTexture(env->pieces[i]);
     }
 
+    for (int i = 0; i < 6; i++) {
+        SDL_DestroyTexture(env->menu_buttons[i].texture);
+    }
+
+    for (int i = 0; i < 3; i++) {
+        SDL_DestroyTexture(env->end_buttons[i].texture);
+    }
+
+    SDL_DestroyTexture(env->background);
+
     SDL_DestroyRenderer(env->renderer);
     SDL_DestroyWindow(env->window);
     IMG_Quit();
@@ -358,6 +433,7 @@ void destroy_env(Env *env) {
     SDL_Quit();
     free(env);
 }
+
 
 void disp_message(Env *env) {
     SDL_Surface *surface;
@@ -457,6 +533,32 @@ void choose_direction(Env *env, SDL_Event *event) {
     }
 }
 
+void menu_choices(Env *env, SDL_Event *event) {
+    int button_clicked = sprite_clicked(event->button.x, event->button.y, env->menu_buttons, 6);
+
+    if (button_clicked == 1) {
+        start_game(env);
+        env->disp_stage = PLACEMENT;
+        printf("PVP\n");
+    } else if (button_clicked == 3) {
+        env->BOT_P = NORTH_P;
+        set_difficulty(EASY);
+        start_game(env);
+        env->disp_stage = PLACEMENT;
+    } else if (button_clicked == 4) {
+        env->BOT_P = NORTH_P;
+        set_difficulty(MEDIUM);
+        start_game(env);
+        env->disp_stage = PLACEMENT;
+    } else if (button_clicked == 5) {
+        env->BOT_P = NORTH_P;
+        set_difficulty(HARD);
+        start_game(env);
+        env->disp_stage = PLACEMENT;
+    }
+
+}
+
 bool end_choices(Env *env, SDL_Event *event) {
     int button_clicked = sprite_clicked(event->button.x, event->button.y, env->end_buttons, 3);
 
@@ -478,7 +580,7 @@ bool process_event(Env *env, SDL_Event *event) {
 
     if (event->type == SDL_WINDOWEVENT) {
         if (env->disp_stage == CONFIG) {
-            // TO DO
+            place_menu_buttons(env);
         } else if (env->disp_stage == END) {
             place_end_buttons(env);
         } else {
@@ -492,10 +594,15 @@ bool process_event(Env *env, SDL_Event *event) {
         return false;
     }
 
+
+    if (env->disp_stage == CONFIG && event->type == SDL_MOUSEBUTTONUP && event->button.button == 1) {
+        menu_choices(env, event);
+    }
+
     if (env->disp_stage == PLACEMENT) {
         drag_initial_pieces(env, event);
     }
-    
+  
     if (env->disp_stage == INGAME && event->type == SDL_MOUSEBUTTONUP && event->button.button == 1) {
         if (picked_piece_size(env->game) == NONE) {
             choose_piece_to_pick(env, event);
@@ -552,13 +659,13 @@ void play_as_bot(Env *env) {
         }
     }
 
-    SDL_Delay(1000);
+    SDL_Delay(500);
 }
 
 void render(Env *env) {
     clear_screen(env);
     if (env->disp_stage == CONFIG) {
-        // TO DO
+        disp_sprites(env, env->menu_buttons, 6);
     } else if (env->disp_stage == END) {
         disp_message(env);
         disp_sprites(env, env->end_buttons, 3);
