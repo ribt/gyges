@@ -271,10 +271,19 @@ int initial_piece_clicked(Env *env, int x, int y) {
 }
 
 void clear_screen(Env *env) {
+    SDL_Rect rect;
+
     /* background in gray */
-    SDL_RenderCopy(env->renderer, env->background, NULL, NULL);
-    //SDL_SetRenderDrawColor(env->renderer, 160, 160, 160, 255); 
-    //SDL_RenderClear(env->renderer);
+    SDL_SetRenderDrawColor(env->renderer, 160, 160, 160, 255); 
+    SDL_RenderClear(env->renderer);
+
+    if (env->disp_stage == PLACEMENT || env->disp_stage == INGAME) {
+        rect.x = MARGIN_LEFT - 10;
+        rect.y = MARGIN_TOP - 10;
+        rect.h = DIMENSION*env->cell_size + 20;
+        rect.w = DIMENSION*env->cell_size + 20;
+        SDL_RenderCopy(env->renderer, env->background, NULL, &rect);
+    }    
 }
 
 void init_background(Env *env) {
@@ -430,7 +439,6 @@ void destroy_env(Env *env) {
     free(env);
 }
 
-
 void disp_message(Env *env) {
     if (env->message[0] == 0) { // message == ""
         return;
@@ -517,7 +525,10 @@ void choose_direction(Env *env, SDL_Event *event) {
         cancel_step(env->game);
     }
     else if (dir_clicked != -1 && move_piece(env->game, dir_clicked) == OK) {
-        if (movement_left(env->game) == -1) {
+        if (movement_left(env->game) == 0) {
+            sprintf(env->message, "Tu es sur une pièce de taille %d.", get_piece_size(env->game, picked_piece_line(env->game), picked_piece_column(env->game)));
+        }
+        else if (movement_left(env->game) == -1) {
             if (get_winner(env->game) == NO_PLAYER) {
                 env->current_player = next_player(env->current_player);
                 sprintf(env->message, "À ton tour %s", player_name(env, env->current_player));
