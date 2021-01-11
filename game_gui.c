@@ -565,7 +565,7 @@ bool process_event(Env *env, SDL_Event *event) {
         return true;
     }
 
-    if (event->type == SDL_WINDOWEVENT) {
+    if (event->type == SDL_WINDOWEVENT && event->window.event == SDL_WINDOWEVENT_RESIZED) {
         if (env->disp_stage == CONFIG) {
             place_menu_buttons(env);
         } else if (env->disp_stage == END) {
@@ -581,26 +581,28 @@ bool process_event(Env *env, SDL_Event *event) {
         return false;
     }
 
-
-    if (env->disp_stage == CONFIG && event->type == SDL_MOUSEBUTTONUP && event->button.button == 1) {
-        menu_choices(env, event);
-    }
-
     if (env->disp_stage == PLACEMENT) {
         drag_initial_pieces(env, event);
     }
-  
-    if (env->disp_stage == INGAME && event->type == SDL_MOUSEBUTTONUP && event->button.button == 1) {
-        if (picked_piece_size(env->game) == NONE) {
-            choose_piece_to_pick(env, event);
-        } else {
-            choose_direction(env, event);
-        }
-    }
 
-    if (env->disp_stage == END && event->type == SDL_MOUSEBUTTONUP && event->button.button == 1) {
-        return end_choices(env, event);
-    }
+    if (event->type == SDL_MOUSEBUTTONUP && event->button.button == 1) {
+        if (env->disp_stage == CONFIG) {
+            menu_choices(env, event);
+        }
+
+        if (env->disp_stage == INGAME) {
+            if (picked_piece_size(env->game) == NONE) {
+                choose_piece_to_pick(env, event);
+            } else {
+                choose_direction(env, event);
+            }
+        }
+
+        if (env->disp_stage == END) {
+            return end_choices(env, event);
+        }
+
+    } 
 
     return false;
 }
