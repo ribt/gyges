@@ -34,8 +34,6 @@ typedef struct {
     SDL_Window *window;
     SDL_Renderer *renderer;
     TTF_Font *font;
-    TTF_Font *font_title;
-    TTF_Font *font_subtitle;
     enum stage disp_stage;
     SDL_Texture *pieces[3];
     struct sprite controls[6];
@@ -181,17 +179,24 @@ void init_end_buttons(Env *env) {
 }
 
 void init_menu_buttons(Env *env) {
+    TTF_Font *font;
     SDL_Color black = {0, 0, 0};
     SDL_Color red = {165, 0, 0};
     SDL_Color green = {0, 165, 0};
 
-    env->menu_buttons[0].texture = SDL_CreateTextureFromSurface(env->renderer, TTF_RenderUTF8_Solid(env->font_title, "Gyges", black));
-    env->menu_buttons[1].texture = SDL_CreateTextureFromSurface(env->renderer, TTF_RenderUTF8_Solid(env->font_subtitle, "Contre un autre joueur local", black));
-    env->menu_buttons[2].texture = SDL_CreateTextureFromSurface(env->renderer, TTF_RenderUTF8_Solid(env->font_subtitle, "Contre l'ordinateur :", black));
-    env->menu_buttons[3].texture = SDL_CreateTextureFromSurface(env->renderer, TTF_RenderUTF8_Solid(env->font_subtitle, "- Facile", green));
-    env->menu_buttons[4].texture = SDL_CreateTextureFromSurface(env->renderer, TTF_RenderUTF8_Solid(env->font_subtitle, "- Moyen", black));
-    env->menu_buttons[5].texture = SDL_CreateTextureFromSurface(env->renderer, TTF_RenderUTF8_Solid(env->font_subtitle, "- Difficile", red));
+    font = TTF_OpenFont("assets/ubuntu.ttf", 100);
 
+    env->menu_buttons[0].texture = SDL_CreateTextureFromSurface(env->renderer, TTF_RenderUTF8_Solid(font, "Gyges", black));
+
+    font = TTF_OpenFont("assets/ubuntu.ttf", 50);
+
+    env->menu_buttons[1].texture = SDL_CreateTextureFromSurface(env->renderer, TTF_RenderUTF8_Solid(font, "Contre un autre joueur local", black));
+    env->menu_buttons[2].texture = SDL_CreateTextureFromSurface(env->renderer, TTF_RenderUTF8_Solid(font, "Contre l'ordinateur :", black));
+    env->menu_buttons[3].texture = SDL_CreateTextureFromSurface(env->renderer, TTF_RenderUTF8_Solid(font, "- Facile", green));
+    env->menu_buttons[4].texture = SDL_CreateTextureFromSurface(env->renderer, TTF_RenderUTF8_Solid(font, "- Moyen", black));
+    env->menu_buttons[5].texture = SDL_CreateTextureFromSurface(env->renderer, TTF_RenderUTF8_Solid(font, "- Difficile", red));
+
+    TTF_CloseFont(font);
 
     for (int i = 0; i < 6; i++) {
         SDL_QueryTexture(env->menu_buttons[i].texture, NULL, NULL, &env->menu_buttons[i].rect.w, &env->menu_buttons[i].rect.h);
@@ -381,13 +386,6 @@ Env *create_env() {
     env->font = TTF_OpenFont("assets/ubuntu.ttf", 30);
     if (!env->font) {fprintf(stderr, "TTF_OpenFont: %s\n", TTF_GetError());}
 
-    env->font_title = TTF_OpenFont("assets/ubuntu.ttf", 100);
-    if (!env->font_title) {fprintf(stderr, "TTF_OpenFont: %s\n", TTF_GetError());}
-
-
-    env->font_subtitle = TTF_OpenFont("assets/ubuntu.ttf", 50);
-    if (!env->font_subtitle) {fprintf(stderr, "TTF_OpenFont: %s\n", TTF_GetError());}
-
     env->dragging_piece = -1;
 
     env->disp_stage = CONFIG;
@@ -425,6 +423,7 @@ void destroy_env(Env *env) {
     }
 
     SDL_DestroyTexture(env->background);
+    TTF_CloseFont(env->font);
 
     SDL_DestroyRenderer(env->renderer);
     SDL_DestroyWindow(env->window);
