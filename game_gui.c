@@ -381,7 +381,6 @@ Env *create_env() {
     env->font = TTF_OpenFont("assets/ubuntu.ttf", 30);
     if (!env->font) {fprintf(stderr, "TTF_OpenFont: %s\n", TTF_GetError());}
 
-
     env->font_title = TTF_OpenFont("assets/ubuntu.ttf", 100);
     if (!env->font_title) {fprintf(stderr, "TTF_OpenFont: %s\n", TTF_GetError());}
 
@@ -394,6 +393,7 @@ Env *create_env() {
     env->disp_stage = CONFIG;
 
     start_game(env); 
+
 
     calculate_cell_size(env);
     init_controls(env);
@@ -602,7 +602,7 @@ bool process_event(Env *env, SDL_Event *event) {
     if (env->disp_stage == PLACEMENT) {
         drag_initial_pieces(env, event);
     }
-
+  
     if (env->disp_stage == INGAME && event->type == SDL_MOUSEBUTTONUP && event->button.button == 1) {
         if (picked_piece_size(env->game) == NONE) {
             choose_piece_to_pick(env, event);
