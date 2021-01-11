@@ -186,7 +186,7 @@ void init_menu_buttons(Env *env) {
 
     font = TTF_OpenFont("assets/ubuntu.ttf", 100);
 
-    env->menu_buttons[0].texture = SDL_CreateTextureFromSurface(env->renderer, TTF_RenderUTF8_Solid(font, "Gyges", black));
+    env->menu_buttons[0].texture = SDL_CreateTextureFromSurface(env->renderer, TTF_RenderUTF8_Solid(font, "Gygès", black));
 
     font = TTF_OpenFont("assets/ubuntu.ttf", 50);
 
@@ -373,7 +373,7 @@ Env *create_env() {
 
     if (TTF_Init() < 0) {fprintf(stderr, "Impossible d'initialiser SDL TTF: %s\n", TTF_GetError());}
 
-    env->window = SDL_CreateWindow("Ma fenêtre de jeu", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_W, SCREEN_H, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+    env->window = SDL_CreateWindow("Gygès", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_W, SCREEN_H, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
 
     env->renderer = SDL_CreateRenderer(env->window, -1, SDL_RENDERER_PRESENTVSYNC);
 
@@ -432,6 +432,9 @@ void destroy_env(Env *env) {
 
 
 void disp_message(Env *env) {
+    if (env->message[0] == 0) { // message == ""
+        return;
+    }
     SDL_Surface *surface;
     SDL_Texture *texture;
     SDL_Rect rect;
@@ -521,7 +524,11 @@ void choose_direction(Env *env, SDL_Event *event) {
             } else {
                 env->disp_stage = END;
                 env->current_player = NO_PLAYER;
-                sprintf(env->message, "Victoire du %s !", player_name(env, env->current_player));
+                if (env->BOT_P != NO_PLAYER) {
+                    sprintf(env->message, "Bien joué humain !");
+                } else {
+                    sprintf(env->message, "Victoire du %s !", player_name(env, get_winner(env->game)));
+                }                
             }
         } else {
             env->message[0] = 0;
@@ -643,7 +650,7 @@ void play_as_bot(Env *env) {
             } else {
                 env->disp_stage = END;
                 env->current_player = NO_PLAYER;
-                sprintf(env->message, "Victoire du %s !", player_name(env, env->current_player));
+                sprintf(env->message, "Je t'ai battu, humain !");
             }
         }
     }
