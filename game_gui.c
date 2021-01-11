@@ -687,7 +687,6 @@ void render(Env *env) {
             }
         }
     }
-    SDL_RenderPresent(env->renderer);
 }
 
 void pause() {
@@ -715,6 +714,9 @@ int main() {
         }
 
         render(env);
+
+        SDL_RenderPresent(env->renderer);
+        SDL_Delay(DELAY);
 
         if (env->current_player == env->BOT_P) {
             play_as_bot(env);
