@@ -36,6 +36,7 @@ typedef struct {
     TTF_Font *font;
     enum stage disp_stage;
     SDL_Texture *pieces[3];
+    SDL_Texture *picked_pieces[3];
     struct sprite controls[7];
     int cell_size;
     board game;
@@ -116,12 +117,17 @@ void place_initial_pieces(Env *env) {
 }
 
 void init_pieces(Env *env) {
-    env->pieces[0] = IMG_LoadTexture(env->renderer, "assets/1piece.png");
-    env->pieces[1] = IMG_LoadTexture(env->renderer, "assets/2piece.png");
-    env->pieces[2] = IMG_LoadTexture(env->renderer, "assets/3piece.png");
+    env->pieces[0] = IMG_LoadTexture(env->renderer, "assets/piece1.png");
+    env->pieces[1] = IMG_LoadTexture(env->renderer, "assets/piece2.png");
+    env->pieces[2] = IMG_LoadTexture(env->renderer, "assets/piece3.png");
+
+    env->picked_pieces[0] = IMG_LoadTexture(env->renderer, "assets/picked_piece1.png");
+    env->picked_pieces[1] = IMG_LoadTexture(env->renderer, "assets/picked_piece2.png");
+    env->picked_pieces[2] = IMG_LoadTexture(env->renderer, "assets/picked_piece3.png");
 
     for (int i = 0; i < 3; i++) {
         if(!env->pieces[i]) fprintf(stderr, "IMG_LoadTexture: %s\n", IMG_GetError());
+        if(!env->picked_pieces[i]) fprintf(stderr, "IMG_LoadTexture: %s\n", IMG_GetError());
     }
 
     place_initial_pieces(env);
@@ -295,7 +301,6 @@ void init_background(Env *env) {
 }
 
 void disp_board(Env *env) {
-    size piece_size;
     SDL_Rect rect;
     int mouse_x, mouse_y;
 
@@ -308,16 +313,16 @@ void disp_board(Env *env) {
 
     for (int line = 0; line < DIMENSION; line++) {
         for (int column = 0; column < DIMENSION; column++) {
-            piece_size = get_piece_size(env->game, line, column);
+            rect.x = MARGIN_LEFT + env->cell_size*column;
+            rect.y = MARGIN_TOP + env->cell_size*(DIMENSION-1 - line);
+            rect.w = env->cell_size;
+            rect.h = env->cell_size;
+
             if (line == picked_piece_line(env->game) && column == picked_piece_column(env->game)) {
-                piece_size = picked_piece_size(env->game);
+                SDL_RenderCopy(env->renderer, env->picked_pieces[picked_piece_size(env->game)-1], NULL, &rect);
             }
-            if (piece_size > NONE) {
-                rect.x = MARGIN_LEFT + env->cell_size*column;
-                rect.y = MARGIN_TOP + env->cell_size*(DIMENSION-1 - line);
-                rect.w = env->cell_size;
-                rect.h = env->cell_size;
-                SDL_RenderCopy(env->renderer, env->pieces[piece_size-1], NULL, &rect);
+            else if (get_piece_size(env->game, line, column) > NONE) {
+                SDL_RenderCopy(env->renderer, env->pieces[get_piece_size(env->game, line, column)-1], NULL, &rect);
             }
         }
     }
