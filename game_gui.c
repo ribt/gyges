@@ -50,21 +50,15 @@ typedef struct {
     SDL_Texture *background;
     player current_player;
     bool swap_allowed;
-    bool nothing_selected;
-    bool easy_selected;
-    bool medium_selected;
-    bool hard_selected;
+    int selected_difficuly;
     player BOT_P;
     move bot_move;
     int dragging_piece;
     struct available_piece initial_pieces[DIMENSION];
     char message[100];
     struct sprite menu_buttons[4];
-    struct checkbox_s nothing;
-    struct checkbox_s easy;
-    struct checkbox_s medium;
-    struct checkbox_s hard;
     struct checkbox_s checkbox;
+    struct checkbox_s difficulties[4];
     struct sprite end_buttons[3];
 } Env;
 
@@ -167,33 +161,29 @@ void place_menu_sprites(Env *env) {
     SDL_GetWindowSize(env->window, &window_w, &window_h);
 
     env->menu_buttons[0].rect.x = window_w/2 - env->menu_buttons[0].rect.w/2;   // TITLE
-    env->menu_buttons[0].rect.y = window_h/8;
+    env->menu_buttons[0].rect.y = window_h/10;
 
     env->menu_buttons[1].rect.x = window_w/8;       // swap autorisé :
-    env->menu_buttons[1].rect.y = window_h/2;
+    env->menu_buttons[1].rect.y = 2*window_h/5;
 
     env->checkbox.rect.x = env->menu_buttons[1].rect.x + env->menu_buttons[1].rect.w + 10;
     env->checkbox.rect.y = env->menu_buttons[1].rect.y;
     env->checkbox.rect.h = env->menu_buttons[1].rect.h;
     env->checkbox.rect.w = env->checkbox.rect.h;
 
-    env->menu_buttons[2].rect.x = env->menu_buttons[1].rect.x;       //PVC
-    env->menu_buttons[2].rect.y = window_h/2 + window_h/10;
+    env->menu_buttons[2].rect.x = env->menu_buttons[1].rect.x;       // Niveau de l'ordi
+    env->menu_buttons[2].rect.y = env->menu_buttons[1].rect.y + env->menu_buttons[1].rect.h + 20;
 
-    env->nothing.rect.x = window_w/20;
-    env->nothing.rect.y = env->menu_buttons[2].rect.y + env->menu_buttons[2].rect.h + 10;
+    env->difficulties[0].rect.x = window_w/20;
+    env->difficulties[0].rect.y = env->menu_buttons[2].rect.y + env->menu_buttons[2].rect.h + 10;
 
-    env->easy.rect.x = env->nothing.rect.x + env->nothing.rect.w + window_w/20;
-    env->easy.rect.y = env->nothing.rect.y;
+    for (int i = 1; i <= 3; i++) {
+        env->difficulties[i].rect.x = env->difficulties[i-1].rect.x + env->difficulties[i-1].rect.w + window_w/20;
+        env->difficulties[i].rect.y = env->difficulties[i-1].rect.y;
+    }
 
-    env->medium.rect.x = env->easy.rect.x + env->easy.rect.w + window_w/20;
-    env->medium.rect.y = env->nothing.rect.y;
-
-    env->hard.rect.x = env->medium.rect.x + env->medium.rect.w + window_w/20;
-    env->hard.rect.y = env->nothing.rect.y;
-
-    env->menu_buttons[3].rect.x = window_w/2 - env->menu_buttons[3].rect.w/2;   //GO
-    env->menu_buttons[3].rect.y = env->hard.rect.y + env->hard.rect.h + 10;
+    env->menu_buttons[3].rect.x = env->difficulties[2].rect.y - window_w/40 - env->menu_buttons[3].rect.w/2;
+    env->menu_buttons[3].rect.y = env->difficulties[2].rect.y + env->difficulties[2].rect.h + window_h/15;
 }
 
 void init_end_buttons(Env *env) {
@@ -233,37 +223,29 @@ void init_menu_sprites(Env *env) {
         if(i >= 3 && !env->menu_buttons[i].texture) fprintf(stderr, "IMG_LoadTexture: %s\n", IMG_GetError());
     }
 
-    env->nothing.textures[0] = IMG_LoadTexture(env->renderer, "assets/aucunselected.png");
-    env->nothing.textures[1] = IMG_LoadTexture(env->renderer, "assets/aucun.png");
-
-    env->easy.textures[0] = IMG_LoadTexture(env->renderer, "assets/facileselected.png");
-    env->easy.textures[1] = IMG_LoadTexture(env->renderer, "assets/facile.png");
-    
-    env->medium.textures[0] = IMG_LoadTexture(env->renderer, "assets/moyenselected.png");
-    env->medium.textures[1] = IMG_LoadTexture(env->renderer, "assets/moyen.png");
-    
-    env->hard.textures[0] = IMG_LoadTexture(env->renderer, "assets/difficileselected.png");
-    env->hard.textures[1] = IMG_LoadTexture(env->renderer, "assets/difficile.png");
-
     env->checkbox.textures[0] = IMG_LoadTexture(env->renderer, "assets/unchecked.png");
     env->checkbox.textures[1] = IMG_LoadTexture(env->renderer, "assets/checked.png");
+
+    env->difficulties[0].textures[0] = IMG_LoadTexture(env->renderer, "assets/aucun.png");
+    env->difficulties[0].textures[1] = IMG_LoadTexture(env->renderer, "assets/aucun_selected.png");
+
+    env->difficulties[1].textures[0] = IMG_LoadTexture(env->renderer, "assets/facile.png");
+    env->difficulties[1].textures[1] = IMG_LoadTexture(env->renderer, "assets/facile_selected.png");
+    
+    env->difficulties[2].textures[0] = IMG_LoadTexture(env->renderer, "assets/moyen.png");
+    env->difficulties[2].textures[1] = IMG_LoadTexture(env->renderer, "assets/moyen_selected.png");
+    
+    env->difficulties[3].textures[0] = IMG_LoadTexture(env->renderer, "assets/difficile.png");
+    env->difficulties[3].textures[1] = IMG_LoadTexture(env->renderer, "assets/difficile_selected.png");
 
     for (int i = 0; i < 2; i++) {
         if(!env->checkbox.textures[i]) fprintf(stderr, "IMG_LoadTexture: %s\n", IMG_GetError());
         SDL_QueryTexture(env->checkbox.textures[i], NULL, NULL, &env->checkbox.rect.w, &env->checkbox.rect.h);
 
-        if(!env->nothing.textures[i]) fprintf(stderr, "IMG_LoadTexture: %s\n", IMG_GetError());
-        SDL_QueryTexture(env->nothing.textures[i], NULL, NULL, &env->nothing.rect.w, &env->nothing.rect.h);
-
-        if(!env->easy.textures[i]) fprintf(stderr, "IMG_LoadTexture: %s\n", IMG_GetError());
-        SDL_QueryTexture(env->easy.textures[i], NULL, NULL, &env->easy.rect.w, &env->easy.rect.h);
-
-        if(!env->medium.textures[i]) fprintf(stderr, "IMG_LoadTexture: %s\n", IMG_GetError());
-        SDL_QueryTexture(env->medium.textures[i], NULL, NULL, &env->medium.rect.w, &env->medium.rect.h);
-
-        if(!env->hard.textures[i]) fprintf(stderr, "IMG_LoadTexture: %s\n", IMG_GetError());
-        SDL_QueryTexture(env->hard.textures[i], NULL, NULL, &env->hard.rect.w, &env->hard.rect.h);
-
+        for (int j = 0; j <= 3; j++) {
+            if(!env->difficulties[j].textures[i]) fprintf(stderr, "IMG_LoadTexture: %s\n", IMG_GetError());
+            SDL_QueryTexture(env->difficulties[j].textures[i], NULL, NULL, &env->difficulties[j].rect.w, &env->difficulties[j].rect.h);
+        }
     }
 
     place_menu_sprites(env);
@@ -459,6 +441,13 @@ void start_game(Env *env) {
     env->game = new_game();
     env->disp_stage = PLACEMENT;
 
+    if (env->selected_difficuly == -1) {
+        env->BOT_P = NO_PLAYER;
+    } else {
+        env->BOT_P = NORTH_P;
+        set_difficulty(env->selected_difficuly);
+    }
+
     if (rand()%2 == 0) {  // random choice of the first player
         env->current_player = NORTH_P;
     } else {
@@ -499,10 +488,7 @@ Env *create_env() {
 
     env->dragging_piece = -1;
     env->swap_allowed = false;
-    env->nothing_selected = true;
-    env->easy_selected = false;
-    env->medium_selected = false;
-    env->hard_selected = false;    
+    env->selected_difficuly = -1;   
     env->BOT_P = NO_PLAYER;
 
     calculate_cell_size(env);
@@ -527,7 +513,7 @@ void destroy_env(Env *env) {
         SDL_DestroyTexture(env->picked_pieces[i]);
     }
 
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 4; i++) {
         SDL_DestroyTexture(env->menu_buttons[i].texture);
     }
 
@@ -537,10 +523,9 @@ void destroy_env(Env *env) {
 
     for (int i = 0; i < 2; i++) {
         SDL_DestroyTexture(env->checkbox.textures[i]);
-        SDL_DestroyTexture(env->nothing.textures[i]);
-        SDL_DestroyTexture(env->easy.textures[i]);
-        SDL_DestroyTexture(env->medium.textures[i]);
-        SDL_DestroyTexture(env->hard.textures[i]);
+        for (int j = 0; j <= 3; j++) {
+            SDL_DestroyTexture(env->difficulties[j].textures[i]);
+        }
     }
 
     SDL_DestroyTexture(env->background);
@@ -702,59 +687,18 @@ void drop_dragging_piece(Env *env, SDL_Event *event) {
 }
 
 void menu_choices(Env *env, SDL_Event *event) {
-    int button_clicked;
 
     if (point_in_rect(event->button.x, event->button.y, env->checkbox.rect)) {
         env->swap_allowed = !env->swap_allowed;
-        return;
     }
 
-    if (point_in_rect(event->button.x, event->button.y, env->nothing.rect)) {    
-        env->BOT_P = NO_PLAYER;;
-        env->nothing_selected = true;
-        env->easy_selected = false;
-        env->medium_selected = false;
-        env->hard_selected = false;
-        return;
+    for (int i = 0; i <= 3; i++) {
+        if (point_in_rect(event->button.x, event->button.y, env->difficulties[i].rect)) {    
+            env->selected_difficuly = i-1;
+        }
     }
-
-    if (point_in_rect(event->button.x, event->button.y, env->easy.rect)) {    
-        env->BOT_P = NORTH_P;;
-        set_difficulty(EASY);
-        env->nothing_selected = false;
-        env->easy_selected = true;
-        env->medium_selected = false;
-        env->hard_selected = false;
-        return;
-    }
-
-    if (point_in_rect(event->button.x, event->button.y, env->medium.rect)) {    
-        env->BOT_P = NORTH_P;;
-        set_difficulty(MEDIUM);
-        env->nothing_selected = false;
-        env->easy_selected = false;
-        env->medium_selected = true;
-        env->hard_selected = false;
-        return;
-    }
-
-    if (point_in_rect(event->button.x, event->button.y, env->hard.rect)) {    
-        env->BOT_P = NORTH_P;;
-        set_difficulty(HARD);
-        env->nothing_selected = false;
-        env->easy_selected = false;
-        env->medium_selected = false;
-        env->hard_selected = true;
-        return;
-    }
-
-    button_clicked = sprite_clicked(event->button.x, event->button.y, env->menu_buttons, 4);
-
-    if (button_clicked < 3) {
-        return;
-    }
-
-    if (button_clicked == 3) {
+    
+    if (sprite_clicked(event->button.x, event->button.y, env->menu_buttons, 4) == 3) {
         start_game(env);
     }
 }
@@ -856,17 +800,20 @@ void disp_menu(Env *env) {
     disp_sprites(env, env->menu_buttons, 4);
 
     SDL_RenderCopy(env->renderer, env->checkbox.textures[env->swap_allowed], NULL, &env->checkbox.rect);
-    SDL_RenderCopy(env->renderer, env->nothing.textures[env->nothing_selected], NULL, &env->nothing.rect);
-    SDL_RenderCopy(env->renderer, env->easy.textures[env->easy_selected], NULL, &env->easy.rect);
-    SDL_RenderCopy(env->renderer, env->medium.textures[env->medium_selected], NULL, &env->medium.rect);
-    SDL_RenderCopy(env->renderer, env->hard.textures[env->hard_selected], NULL, &env->hard.rect);
+
+    for (int i = 0; i <= 3; i++) {
+        if (env->selected_difficuly == i-1) {
+            SDL_RenderCopy(env->renderer, env->difficulties[i].textures[1], NULL, &env->difficulties[i].rect);
+        } else {
+            SDL_RenderCopy(env->renderer, env->difficulties[i].textures[0], NULL, &env->difficulties[i].rect);
+        }
+    }
 }
 
 void render(Env *env) {
     clear_screen(env);
     if (env->disp_stage == CONFIG) {
         disp_menu(env);
-        
     } else {
         disp_message(env);
         disp_board(env);
