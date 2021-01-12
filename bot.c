@@ -1,3 +1,4 @@
+#include "bot.h"
 #include "board.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -5,8 +6,6 @@
 #include "display.h"
 #include <time.h>
 
-#define MAX_PATH_LEN 100
-#define PAUSE_MS 750
 #define MAX_RANDOM_TRIES 10
 
 #ifdef DEBUG
@@ -15,40 +14,16 @@
     #define trace(s)
 #endif
 
-typedef enum {EASY, MEDIUM, HARD} level;
 level difficulty = HARD;
-
-typedef struct {
-    int len;
-    direction directions[MAX_PATH_LEN];
-} path;
 
 path NULL_PATH = {
     0,
     {}
 };
 
-typedef struct {
-    int line;
-    int column;
-} position;
-
-typedef struct {
-    position piece;
-    path path;
-} move;
-
 void set_difficulty(level choice) {
-    switch(choice) {
-        case EASY: printf("Niveau : facile\n"); break;
-        case MEDIUM: printf("Niveau : moyen\n"); break;
-        case HARD: printf("Niveau : dur\n"); break;
-        default: return;
-    }
-
     difficulty = choice;
 }
-
 
 void copy_path(path *src, path *dst) {
     dst->len = src->len;
@@ -93,24 +68,6 @@ void random_piece_placement(board game, player bot) {
             column++;
         }
     }
-}
-
-// execute and display a move
-void disp_move(board game, player bot, move move) {
-    #ifdef DEBUG
-        clear_screen();
-    #endif
-    disp_board(game);
-    usleep(PAUSE_MS*1000);
-    pick_piece(game, bot, move.piece.line, move.piece.column);
-    for (int i = 0; i < move.path.len; i++) {
-        clear_screen();
-        disp_board(game);
-        usleep(PAUSE_MS*1000);
-        move_piece(game, move.path.directions[i]);
-    }
-    clear_screen();
-    disp_board(game);
 }
 
 position random_pickable_piece(board game, player bot) {
@@ -363,13 +320,14 @@ move move_avoiding_enemy_to_win(board game, player bot) {
     return random_move(game, bot, MAX_RANDOM_TRIES);
 }
 
-void bot_move(board game, player bot) {
+move bot_move(board game, player bot) {
     if (can_win(game, bot) && (difficulty > EASY || rand()%2)) {
-        disp_move(game, bot, best_move_to_win(game, bot));
-    } else if (can_win(game, next_player(bot)) && rand()%2 < difficulty) {
-        disp_move(game, bot, move_avoiding_enemy_to_win(game, bot));
-    } else {
-        disp_move(game, bot, random_move(game, bot, 0));
+        return best_move_to_win(game, bot);
     }
-    
+
+    if (can_win(game, next_player(bot)) && rand()%2 < difficulty) {
+        return move_avoiding_enemy_to_win(game, bot);
+    }
+
+    return random_move(game, bot, 0);    
 }

@@ -1,4 +1,5 @@
 #include "board.h"
+#include "bot.h"
 
 /* 
 This function prints the board, line by line.
@@ -26,3 +27,5 @@ this function allows us to clear the terminal
 we call it very often so for better performances we used a macro function but our teacher didn't like it :c
 */
 void clear_screen();
+
+void disp_move(board game, player bot, move move);
