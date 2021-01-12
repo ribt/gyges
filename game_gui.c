@@ -23,6 +23,11 @@ struct sprite {
     SDL_Rect rect;
 };
 
+struct checkbox_s {
+    SDL_Texture *textures[2];
+    SDL_Rect rect;
+};
+
 struct available_piece {
     size size;
     SDL_Rect rect;    
@@ -49,6 +54,7 @@ typedef struct {
     struct available_piece initial_pieces[DIMENSION];
     char message[100];
     struct sprite menu_buttons[6];
+    struct checkbox_s checkbox;
     struct sprite end_buttons[3];
 } Env;
 
@@ -149,7 +155,7 @@ void place_end_buttons(Env *env) {
     env->end_buttons[2].rect.y = env->end_buttons[1].rect.y + env->end_buttons[1].rect.h + 10;
 }
 
-void place_menu_buttons(Env *env) {
+void place_menu_sprites(Env *env) {
     int window_w, window_h;
 
     SDL_GetWindowSize(env->window, &window_w, &window_h);
@@ -157,8 +163,13 @@ void place_menu_buttons(Env *env) {
     env->menu_buttons[0].rect.x = window_w/2 - env->menu_buttons[0].rect.w/2;       //TITLE
     env->menu_buttons[0].rect.y = window_h/8;
 
-    env->menu_buttons[1].rect.x = env->menu_buttons[1].rect.w/8;       //PVP
+    env->menu_buttons[1].rect.x = env->menu_buttons[1].rect.w/8;       // swap autorisé :
     env->menu_buttons[1].rect.y = window_h/2;
+
+    env->checkbox.rect.x = env->menu_buttons[1].rect.x + env->menu_buttons[1].rect.w + 10;
+    env->checkbox.rect.y = env->menu_buttons[1].rect.y;
+    env->checkbox.rect.h = env->menu_buttons[1].rect.h;
+    env->checkbox.rect.w = env->checkbox.rect.h;
 
     env->menu_buttons[2].rect.x = env->menu_buttons[1].rect.x;       //PVC
     env->menu_buttons[2].rect.y = window_h/2 + window_h/10;
@@ -187,7 +198,7 @@ void init_end_buttons(Env *env) {
     place_end_buttons(env);
 }
 
-void init_menu_buttons(Env *env) {
+void init_menu_sprites(Env *env) {
     TTF_Font *font;
     SDL_Color black = {0, 0, 0};
     SDL_Color red = {165, 0, 0};
@@ -197,10 +208,11 @@ void init_menu_buttons(Env *env) {
 
     env->menu_buttons[0].texture = SDL_CreateTextureFromSurface(env->renderer, TTF_RenderUTF8_Solid(font, "Gygès", black));
 
+    TTF_CloseFont(font);
     font = TTF_OpenFont("assets/ubuntu.ttf", 50);
 
-    env->menu_buttons[1].texture = SDL_CreateTextureFromSurface(env->renderer, TTF_RenderUTF8_Solid(font, "Contre un autre joueur local", black));
-    env->menu_buttons[2].texture = SDL_CreateTextureFromSurface(env->renderer, TTF_RenderUTF8_Solid(font, "Contre l'ordinateur :", black));
+    env->menu_buttons[1].texture = SDL_CreateTextureFromSurface(env->renderer, TTF_RenderUTF8_Solid(font, "Swap autorisé :", black));
+    env->menu_buttons[2].texture = SDL_CreateTextureFromSurface(env->renderer, TTF_RenderUTF8_Solid(font, "Niveau de l'ordinateur :", black));
     env->menu_buttons[3].texture = SDL_CreateTextureFromSurface(env->renderer, TTF_RenderUTF8_Solid(font, "- Facile", green));
     env->menu_buttons[4].texture = SDL_CreateTextureFromSurface(env->renderer, TTF_RenderUTF8_Solid(font, "- Moyen", black));
     env->menu_buttons[5].texture = SDL_CreateTextureFromSurface(env->renderer, TTF_RenderUTF8_Solid(font, "- Difficile", red));
@@ -211,7 +223,15 @@ void init_menu_buttons(Env *env) {
         SDL_QueryTexture(env->menu_buttons[i].texture, NULL, NULL, &env->menu_buttons[i].rect.w, &env->menu_buttons[i].rect.h);
     }
 
-    place_menu_buttons(env);
+    env->checkbox.textures[0] = IMG_LoadTexture(env->renderer, "assets/unchecked.png");
+    env->checkbox.textures[1] = IMG_LoadTexture(env->renderer, "assets/checked.png");
+
+    for (int i = 0; i < 2; i++) {
+        if(!env->checkbox.textures[i]) fprintf(stderr, "IMG_LoadTexture: %s\n", IMG_GetError());
+        SDL_QueryTexture(env->checkbox.textures[i], NULL, NULL, &env->checkbox.rect.w, &env->checkbox.rect.h);
+    }
+
+    place_menu_sprites(env);
 }
 
 char *player_name(Env *env, player this_player) {
@@ -233,6 +253,10 @@ char *player_name(Env *env, player this_player) {
     return "";
 }
 
+bool point_in_rect(int x, int y, SDL_Rect rect) {
+    return x > rect.x && x < rect.x+rect.w && y > rect.y && y < rect.y+rect.h;
+}
+
 void calculate_cell_size(Env * env) {
     int window_w, window_h;
     int cell_size_w, cell_size_h;
@@ -251,7 +275,7 @@ void calculate_cell_size(Env * env) {
 
 int sprite_clicked(int x, int y, struct sprite sprites[], int len) {
     for (int i = 0; i < len; i++) {
-        if (x > sprites[i].rect.x && x < sprites[i].rect.x+sprites[i].rect.w && y > sprites[i].rect.y && y < sprites[i].rect.y+sprites[i].rect.h) {
+        if (point_in_rect(x, y, sprites[i].rect)) {
             return i;
         }
     }
@@ -271,8 +295,7 @@ position position_clicked(Env *env, int x, int y) {
 
 int initial_piece_clicked(Env *env, int x, int y) {
     for (int i = 0; i <= DIMENSION; i++) {
-        if (x > env->initial_pieces[i].rect.x && x < env->initial_pieces[i].rect.x+env->initial_pieces[i].rect.w &&
-              y > env->initial_pieces[i].rect.y && y < env->initial_pieces[i].rect.y+env->initial_pieces[i].rect.h) {
+        if (point_in_rect(x, y, env->initial_pieces[i].rect)) {
             return i;
         }
     }
@@ -424,7 +447,7 @@ Env *create_env() {
     if (!env->font) {fprintf(stderr, "TTF_OpenFont: %s\n", TTF_GetError());}
 
     env->dragging_piece = -1;
-    env->swap_allowed = true; // TO DO : default=false and set it in the config screen
+    env->swap_allowed = false;
     env->BOT_P = NO_PLAYER;
 
     env->disp_stage = CONFIG;
@@ -433,7 +456,7 @@ Env *create_env() {
     init_controls(env);
     init_pieces(env);
     init_background(env);
-    init_menu_buttons(env);
+    init_menu_sprites(env);
     init_end_buttons(env);
 
     return env;
@@ -619,7 +642,14 @@ void drop_dragging_piece(Env *env, SDL_Event *event) {
 }
 
 void menu_choices(Env *env, SDL_Event *event) {
-    int button_clicked = sprite_clicked(event->button.x, event->button.y, env->menu_buttons, 6);
+    int button_clicked;
+
+    if (point_in_rect(event->button.x, event->button.y, env->checkbox.rect)) {
+        env->swap_allowed = !env->swap_allowed;
+        return;
+    }
+
+    button_clicked = sprite_clicked(event->button.x, event->button.y, env->menu_buttons, 6);
 
     if (button_clicked <= 0 || button_clicked == 2) {
         return;
@@ -656,7 +686,7 @@ bool process_event(Env *env, SDL_Event *event) {
 
     if (event->type == SDL_WINDOWEVENT && event->window.event == SDL_WINDOWEVENT_RESIZED) {
         if (env->disp_stage == CONFIG) {
-            place_menu_buttons(env);
+            place_menu_sprites(env);
         } else if (env->disp_stage == END) {
             place_end_buttons(env);
         } else {
@@ -735,10 +765,17 @@ void play_as_bot(Env *env) {
     SDL_Delay(500);
 }
 
+void disp_menu(Env *env) {
+    disp_sprites(env, env->menu_buttons, 6);
+
+    SDL_RenderCopy(env->renderer, env->checkbox.textures[env->swap_allowed], NULL, &env->checkbox.rect);
+}
+
 void render(Env *env) {
     clear_screen(env);
     if (env->disp_stage == CONFIG) {
-        disp_sprites(env, env->menu_buttons, 6);
+        disp_menu(env);
+        
     } else {
         disp_message(env);
         disp_board(env);
