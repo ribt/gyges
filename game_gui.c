@@ -419,6 +419,7 @@ Env *create_env() {
     if (!env->font) {fprintf(stderr, "TTF_OpenFont: %s\n", TTF_GetError());}
 
     env->dragging_piece = -1;
+    env->BOT_P = NO_PLAYER;
 
     env->disp_stage = CONFIG;
 
@@ -435,12 +436,13 @@ Env *create_env() {
 void destroy_env(Env *env) {
     destroy_game(env->game);
 
-    for (direction i = GOAL; i <= WEST+1; i++) {
+    for (int i = 0; i < 7; i++) {
         SDL_DestroyTexture(env->controls[i].texture);
     }
 
-    for (int i = 1; i <= 3; i++) {
+    for (int i = 0; i < 3; i++) {
         SDL_DestroyTexture(env->pieces[i]);
+        SDL_DestroyTexture(env->picked_pieces[i]);
     }
 
     for (int i = 0; i < 6; i++) {
