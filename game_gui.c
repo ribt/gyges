@@ -42,6 +42,7 @@ typedef struct {
     board game;
     SDL_Texture *background;
     player current_player;
+    bool swap_allowed;
     player BOT_P;
     move bot_move;
     int dragging_piece;
@@ -285,7 +286,7 @@ void clear_screen(Env *env) {
     SDL_SetRenderDrawColor(env->renderer, 160, 160, 160, 255); 
     SDL_RenderClear(env->renderer);
 
-    if (env->disp_stage == PLACEMENT || env->disp_stage == INGAME) {
+    if (env->disp_stage != CONFIG) {
         rect.x = MARGIN_LEFT - 10;
         rect.y = MARGIN_TOP - 10;
         rect.h = DIMENSION*env->cell_size + 20;
@@ -367,7 +368,7 @@ void disp_controls(Env *env) {
             }
         }
         
-        if (movement_left(env->game) == 0) {
+        if (movement_left(env->game) == 0 && env->swap_allowed) {
             SDL_RenderCopy(env->renderer, env->controls[6].texture, NULL, &env->controls[6].rect); // swap
         }
     }
@@ -375,6 +376,10 @@ void disp_controls(Env *env) {
 
 void disp_sprites(Env *env, struct sprite sprites[], int len) {
     for (int i = 0; i < len; i++) {
+        if (env->disp_stage == END) {
+            SDL_SetRenderDrawColor(env->renderer, 160, 160, 160, 255);
+            SDL_RenderFillRect(env->renderer, &sprites[i].rect);
+        }
         SDL_RenderCopy(env->renderer, sprites[i].texture, NULL, &sprites[i].rect);
     }
 }
@@ -419,6 +424,7 @@ Env *create_env() {
     if (!env->font) {fprintf(stderr, "TTF_OpenFont: %s\n", TTF_GetError());}
 
     env->dragging_piece = -1;
+    env->swap_allowed = true; // TO DO : default=false and set it in the config screen
     env->BOT_P = NO_PLAYER;
 
     env->disp_stage = CONFIG;
@@ -574,7 +580,7 @@ void choose_direction(Env *env, SDL_Event *event) {
         cancel_step(env->game);
     }
     else if (dir_clicked == 6) {
-        if (movement_left(env->game) == 0) {
+        if (movement_left(env->game) == 0 && env->swap_allowed) {
             env->dragging_piece = get_piece_size(env->game, picked_piece_line(env->game), picked_piece_column(env->game));
             sprintf(env->message, "Pose la pièce sur le plateau.");
             return;
@@ -733,9 +739,6 @@ void render(Env *env) {
     clear_screen(env);
     if (env->disp_stage == CONFIG) {
         disp_sprites(env, env->menu_buttons, 6);
-    } else if (env->disp_stage == END) {
-        disp_message(env);
-        disp_sprites(env, env->end_buttons, 3);
     } else {
         disp_message(env);
         disp_board(env);
@@ -745,6 +748,8 @@ void render(Env *env) {
             if (env->current_player != env->BOT_P) {
                 disp_controls(env);       
             }
+        } else if (env->disp_stage == END) {
+            disp_sprites(env, env->end_buttons, 3);
         }
     }
 }
