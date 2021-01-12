@@ -36,7 +36,7 @@ typedef struct {
     TTF_Font *font;
     enum stage disp_stage;
     SDL_Texture *pieces[3];
-    struct sprite controls[6];
+    struct sprite controls[7];
     int cell_size;
     board game;
     SDL_Texture *background;
@@ -46,8 +46,8 @@ typedef struct {
     int dragging_piece;
     struct available_piece initial_pieces[DIMENSION];
     char message[100];
-    struct sprite end_buttons[3];
     struct sprite menu_buttons[6];
+    struct sprite end_buttons[3];
 } Env;
 
 void place_controls(Env *env) {
@@ -58,34 +58,38 @@ void place_controls(Env *env) {
     mid_x = MARGIN_LEFT + DIMENSION*env->cell_size + (window_w - MARGIN_LEFT - DIMENSION*env->cell_size)/2;
     mid_y = (window_h+MARGIN_TOP/2)/2;
 
-    env->controls[SOUTH].rect.x = mid_x - 0.5*env->controls[SOUTH].rect.w;
-    env->controls[SOUTH].rect.y = mid_y + 0.5*env->controls[EAST].rect.h;
+    env->controls[SOUTH].rect.x = mid_x - env->controls[SOUTH].rect.w/2;
+    env->controls[SOUTH].rect.y = mid_y + env->controls[EAST].rect.h/2;
 
-    env->controls[NORTH].rect.x = mid_x - 0.5*env->controls[NORTH].rect.w;
-    env->controls[NORTH].rect.y = mid_y - env->controls[NORTH].rect.h - 0.5*env->controls[EAST].rect.h;
+    env->controls[NORTH].rect.x = mid_x - env->controls[NORTH].rect.w/2;
+    env->controls[NORTH].rect.y = mid_y - env->controls[NORTH].rect.h - env->controls[EAST].rect.h/2;
 
-    env->controls[EAST].rect.x = mid_x + 0.5*env->controls[NORTH].rect.w;
-    env->controls[EAST].rect.y = mid_y - 0.5*env->controls[EAST].rect.h;
+    env->controls[EAST].rect.x = mid_x + env->controls[NORTH].rect.w/2;
+    env->controls[EAST].rect.y = mid_y - env->controls[EAST].rect.h/2;
 
-    env->controls[WEST].rect.x = mid_x - 0.5*env->controls[NORTH].rect.w - env->controls[EAST].rect.w;
-    env->controls[WEST].rect.y = mid_y - 0.5*env->controls[EAST].rect.h;
+    env->controls[WEST].rect.x = mid_x - env->controls[NORTH].rect.w/2 - env->controls[EAST].rect.w;
+    env->controls[WEST].rect.y = mid_y - env->controls[EAST].rect.h/2;
 
-    env->controls[GOAL].rect.x = mid_x - 0.5*env->controls[GOAL].rect.w;
-    env->controls[GOAL].rect.y = env->controls[NORTH].rect.y - 15 - env->controls[GOAL].rect.h;
+    env->controls[6].rect.x = mid_x - env->controls[6].rect.w/2;
+    env->controls[6].rect.y = env->controls[NORTH].rect.y - 10 - env->controls[6].rect.h;
 
-    env->controls[5].rect.x = mid_x - 0.5*env->controls[5].rect.w;
+    env->controls[GOAL].rect.x = mid_x - env->controls[GOAL].rect.w/2;
+    env->controls[GOAL].rect.y = env->controls[6].rect.y - 15 - env->controls[GOAL].rect.h;
+
+    env->controls[5].rect.x = mid_x - env->controls[5].rect.w/2;
     env->controls[5].rect.y = env->controls[SOUTH].rect.y + env->controls[SOUTH].rect.h + 15;
 }
 
 void init_controls(Env *env) {
+    env->controls[GOAL].texture = IMG_LoadTexture(env->renderer, "assets/win.png");
     env->controls[SOUTH].texture = IMG_LoadTexture(env->renderer, "assets/arrow_s.png");
     env->controls[NORTH].texture = IMG_LoadTexture(env->renderer, "assets/arrow_n.png");
     env->controls[EAST].texture = IMG_LoadTexture(env->renderer, "assets/arrow_e.png");   
     env->controls[WEST].texture = IMG_LoadTexture(env->renderer, "assets/arrow_w.png");
-    env->controls[GOAL].texture = IMG_LoadTexture(env->renderer, "assets/win.png");
     env->controls[5].texture = IMG_LoadTexture(env->renderer, "assets/cancel.png");
+    env->controls[6].texture = IMG_LoadTexture(env->renderer, "assets/swap.png");
 
-    for (int i = 0; i <= 5; i++) {
+    for (int i = 0; i <= 6; i++) {
         if(!env->controls[i].texture) fprintf(stderr, "IMG_LoadTexture: %s\n", IMG_GetError());
         SDL_QueryTexture(env->controls[i].texture, NULL, NULL, &env->controls[i].rect.w, &env->controls[i].rect.h);
     }
@@ -110,7 +114,6 @@ void place_initial_pieces(Env *env) {
         env->initial_pieces[i].rect.h = env->cell_size;
     }
 }
-
 
 void init_pieces(Env *env) {
     env->pieces[0] = IMG_LoadTexture(env->renderer, "assets/1piece.png");
@@ -161,7 +164,6 @@ void place_menu_buttons(Env *env) {
 
     env->menu_buttons[5].rect.x = env->menu_buttons[4].rect.x + env->menu_buttons[4].rect.w + window_h/10;       //HARD
     env->menu_buttons[5].rect.y = env->menu_buttons[2].rect.y + env->menu_buttons[2].rect.h;
-
 }
 
 void init_end_buttons(Env *env) {
@@ -295,6 +297,7 @@ void init_background(Env *env) {
 void disp_board(Env *env) {
     size piece_size;
     SDL_Rect rect;
+    int mouse_x, mouse_y;
 
     /* draw black lines to make te board */
     SDL_SetRenderDrawColor(env->renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
@@ -315,9 +318,17 @@ void disp_board(Env *env) {
                 rect.w = env->cell_size;
                 rect.h = env->cell_size;
                 SDL_RenderCopy(env->renderer, env->pieces[piece_size-1], NULL, &rect);
-
             }
         }
+    }
+
+    if (env->dragging_piece > 0 && env->disp_stage == INGAME) {
+        SDL_GetMouseState(&mouse_x, &mouse_y);
+        rect.x = mouse_x - env->cell_size/2;
+        rect.y = mouse_y - env->cell_size/2;
+        rect.w = env->cell_size;
+        rect.h = env->cell_size;
+        SDL_RenderCopy(env->renderer, env->pieces[env->dragging_piece-1], NULL, &rect);
     }
 }
 
@@ -340,13 +351,20 @@ void disp_initial_pieces(Env *env) {
 }
 
 void disp_controls(Env *env) {
-    for (direction dir = GOAL; dir <= WEST; dir++) {
-        if (is_move_possible(env->game, dir)) {
-            SDL_RenderCopy(env->renderer, env->controls[dir].texture, NULL, &env->controls[dir].rect);
-        }
-    }
     if (picked_piece_size(env->game) != NONE) {
         SDL_RenderCopy(env->renderer, env->controls[5].texture, NULL, &env->controls[5].rect); // cancel
+    }
+
+    if (env->dragging_piece == -1) {
+        for (direction dir = GOAL; dir <= WEST; dir++) {
+            if (is_move_possible(env->game, dir)) {
+                SDL_RenderCopy(env->renderer, env->controls[dir].texture, NULL, &env->controls[dir].rect);
+            }
+        }
+        
+        if (movement_left(env->game) == 0) {
+            SDL_RenderCopy(env->renderer, env->controls[6].texture, NULL, &env->controls[6].rect); // swap
+        }
     }
 }
 
@@ -517,32 +535,72 @@ void choose_piece_to_pick(Env *env, SDL_Event *event) {
     pick_piece(env->game, env->current_player, pos_clicked.line, pos_clicked.column);
 }
 
+void end_of_turn(Env *env) {
+    player winner;
+
+    winner = get_winner(env->game);
+
+    if (winner == NO_PLAYER) {
+        env->current_player = next_player(env->current_player);
+        sprintf(env->message, "À ton tour %s", player_name(env, env->current_player));
+    } else {
+        env->disp_stage = END;
+        env->current_player = NO_PLAYER;
+        if (env->BOT_P != NO_PLAYER) {
+            if (winner == env->BOT_P) {
+                sprintf(env->message, "Je t'ai battu, humain !");
+            } else {
+                sprintf(env->message, "Bien joué humain !");
+            }
+        } else {
+            sprintf(env->message, "Victoire du %s !", player_name(env, get_winner(env->game)));
+        }                
+    }
+}
+
 void choose_direction(Env *env, SDL_Event *event) {
     int dir_clicked;
 
-    dir_clicked = sprite_clicked(event->button.x, event->button.y, env->controls, 6);
+    dir_clicked = sprite_clicked(event->button.x, event->button.y, env->controls, 7);
+
     if (dir_clicked == 5) {
         cancel_step(env->game);
     }
-    else if (dir_clicked != -1 && move_piece(env->game, dir_clicked) == OK) {
+    else if (dir_clicked == 6) {
         if (movement_left(env->game) == 0) {
-            sprintf(env->message, "Tu es sur une pièce de taille %d.", get_piece_size(env->game, picked_piece_line(env->game), picked_piece_column(env->game)));
+            env->dragging_piece = get_piece_size(env->game, picked_piece_line(env->game), picked_piece_column(env->game));
+            sprintf(env->message, "Pose la pièce sur le plateau.");
+            return;
         }
-        else if (movement_left(env->game) == -1) {
-            if (get_winner(env->game) == NO_PLAYER) {
-                env->current_player = next_player(env->current_player);
-                sprintf(env->message, "À ton tour %s", player_name(env, env->current_player));
-            } else {
-                env->disp_stage = END;
-                env->current_player = NO_PLAYER;
-                if (env->BOT_P != NO_PLAYER) {
-                    sprintf(env->message, "Bien joué humain !");
-                } else {
-                    sprintf(env->message, "Victoire du %s !", player_name(env, get_winner(env->game)));
-                }                
-            }
-        } else {
-            env->message[0] = 0;
+    }
+    else if (dir_clicked != -1) {
+        move_piece(env->game, dir_clicked);
+    }
+
+    if (movement_left(env->game) == 0) {
+        sprintf(env->message, "Tu es sur une pièce de taille %d.", get_piece_size(env->game, picked_piece_line(env->game), picked_piece_column(env->game)));
+    }
+    else if (movement_left(env->game) == -1 && dir_clicked != 5) {
+        end_of_turn(env);            
+    } else {
+        env->message[0] = 0;
+    }
+}
+
+void drop_dragging_piece(Env *env, SDL_Event *event) {
+    position pos_clicked;
+
+    if (sprite_clicked(event->button.x, event->button.y, env->controls, 7) == 5) {
+        env->dragging_piece = -1;
+        sprintf(env->message, "Tu es sur une pièce de taille %d.", get_piece_size(env->game, picked_piece_line(env->game), picked_piece_column(env->game)));
+    }
+
+    else {
+        pos_clicked = position_clicked(env, event->button.x, event->button.y);
+
+        if (swap_piece(env->game, pos_clicked.line, pos_clicked.column) == OK) {
+            env->dragging_piece = -1;
+            end_of_turn(env);
         }
     }
 }
@@ -611,6 +669,8 @@ bool process_event(Env *env, SDL_Event *event) {
         if (env->disp_stage == INGAME) {
             if (picked_piece_size(env->game) == NONE) {
                 choose_piece_to_pick(env, event);
+            } else if (env->dragging_piece > 0) {
+                drop_dragging_piece(env, event);
             } else {
                 choose_direction(env, event);
             }
@@ -655,14 +715,7 @@ void play_as_bot(Env *env) {
         move_piece(env->game, env->bot_move.path.directions[i]);
         env->bot_move.path.directions[i] = -1;
         if (movement_left(env->game) == -1) {
-            if (get_winner(env->game) == NO_PLAYER) {
-                env->current_player = next_player(env->current_player);
-                sprintf(env->message, "À ton tour %s", player_name(env, env->current_player));
-            } else {
-                env->disp_stage = END;
-                env->current_player = NO_PLAYER;
-                sprintf(env->message, "Je t'ai battu, humain !");
-            }
+            end_of_turn(env);
         }
     }
 
