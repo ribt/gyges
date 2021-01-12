@@ -147,10 +147,10 @@ void place_end_buttons(Env *env) {
     env->end_buttons[1].rect.y = window_h/2 - env->end_buttons[1].rect.h/2;
 
     env->end_buttons[0].rect.x = window_w/2 - env->end_buttons[0].rect.w/2;
-    env->end_buttons[0].rect.y = env->end_buttons[1].rect.y - 10 - env->end_buttons[0].rect.h;
+    env->end_buttons[0].rect.y = env->end_buttons[1].rect.y - window_h/10 - env->end_buttons[0].rect.h;
 
     env->end_buttons[2].rect.x = window_w/2 - env->end_buttons[2].rect.w/2;
-    env->end_buttons[2].rect.y = env->end_buttons[1].rect.y + env->end_buttons[1].rect.h + 10;
+    env->end_buttons[2].rect.y = env->end_buttons[1].rect.y + env->end_buttons[1].rect.h + window_h/10;
 }
 
 void place_menu_sprites(Env *env) {
@@ -463,8 +463,6 @@ Env *create_env() {
     env->dragging_piece = -1;
     env->swap_allowed = false;
     env->BOT_P = NO_PLAYER;
-
-    env->disp_stage = CONFIG;
 
     calculate_cell_size(env);
     init_controls(env);
