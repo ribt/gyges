@@ -16,7 +16,7 @@
 #define MARGIN_RIGHT 230
 #define MARGIN_TOP 120
 #define MARGIN_BOTTOM 100
-#define DELAY 1
+#define DELAY 10
 
 struct sprite {
     SDL_Texture *texture;
@@ -38,6 +38,8 @@ enum stage {CONFIG, PLACEMENT, INGAME, END};
 typedef struct {
     SDL_Window *window;
     SDL_Renderer *renderer;
+    int margin_left;
+    int margin_top;
     TTF_Font *font;
     enum stage disp_stage;
     SDL_Texture *pieces[3];
@@ -63,8 +65,8 @@ void place_controls(Env *env) {
     int mid_x, mid_y;
 
     SDL_GetWindowSize(env->window, &window_w, &window_h);
-    mid_x = MARGIN_LEFT + DIMENSION*env->cell_size + (window_w - MARGIN_LEFT - DIMENSION*env->cell_size)/2;
-    mid_y = (window_h+MARGIN_TOP/2)/2;
+    mid_x = env->margin_left + DIMENSION*env->cell_size + MARGIN_RIGHT/2;
+    mid_y = (window_h+env->margin_top/2)/2;
 
     env->controls[SOUTH].rect.x = mid_x - env->controls[SOUTH].rect.w/2;
     env->controls[SOUTH].rect.y = mid_y + env->controls[EAST].rect.h/2;
@@ -111,13 +113,9 @@ void enable_initial_pieces(Env *env) {
 }
 
 void place_initial_pieces(Env *env) {
-    int window_w, window_h;
-
-    SDL_GetWindowSize(env->window, &window_w, &window_h);
-
     for (int i = 0; i< DIMENSION; i++) {
-        env->initial_pieces[i].rect.y = MARGIN_TOP + DIMENSION*env->cell_size + 20;
-        env->initial_pieces[i].rect.x = 20 + i*(env->initial_pieces[0].rect.w+10);
+        env->initial_pieces[i].rect.y = env->margin_top + DIMENSION*env->cell_size + 20;
+        env->initial_pieces[i].rect.x = env->margin_left + DIMENSION*env->cell_size/2 + (i - DIMENSION/2)*(env->initial_pieces[0].rect.w+10);
         env->initial_pieces[i].rect.w = env->cell_size;
         env->initial_pieces[i].rect.h = env->cell_size;
     }
@@ -260,6 +258,7 @@ bool point_in_rect(int x, int y, SDL_Rect rect) {
 void calculate_cell_size(Env * env) {
     int window_w, window_h;
     int cell_size_w, cell_size_h;
+    int tmp;
 
     SDL_GetWindowSize(env->window, &window_w, &window_h);
 
@@ -268,8 +267,20 @@ void calculate_cell_size(Env * env) {
 
     if (cell_size_w < cell_size_h) {
         env->cell_size = cell_size_w;
+        tmp = window_h - DIMENSION*env->cell_size;
+        if (tmp > MARGIN_TOP*2) {
+            env->margin_top = tmp/2;
+        } else {
+            env->margin_top = MARGIN_TOP;
+        }
     } else {
         env->cell_size = cell_size_h;
+        tmp = window_w - DIMENSION*env->cell_size;
+        if (tmp > MARGIN_RIGHT*2) {
+            env->margin_left = tmp/2;
+        } else {
+            env->margin_left = tmp-MARGIN_RIGHT;
+        }
     }
 }
 
@@ -285,9 +296,9 @@ int sprite_clicked(int x, int y, struct sprite sprites[], int len) {
 position position_clicked(Env *env, int x, int y) {
     position response = {-1, -1};
 
-    if (x > MARGIN_LEFT && x < MARGIN_LEFT+DIMENSION*env->cell_size && y > MARGIN_TOP && y < MARGIN_TOP+DIMENSION*env->cell_size) {
-        response.column = (x-MARGIN_LEFT)/env->cell_size;
-        response.line = DIMENSION-1 - (y-MARGIN_TOP)/env->cell_size;
+    if (x > env->margin_left && x < env->margin_left+DIMENSION*env->cell_size && y > env->margin_top && y < env->margin_top+DIMENSION*env->cell_size) {
+        response.column = (x-env->margin_left)/env->cell_size;
+        response.line = DIMENSION-1 - (y-env->margin_top)/env->cell_size;
     }
 
     return response;
@@ -310,8 +321,8 @@ void clear_screen(Env *env) {
     SDL_RenderClear(env->renderer);
 
     if (env->disp_stage != CONFIG) {
-        rect.x = MARGIN_LEFT - 10;
-        rect.y = MARGIN_TOP - 10;
+        rect.x = env->margin_left - 10;
+        rect.y = env->margin_top - 10;
         rect.h = DIMENSION*env->cell_size + 20;
         rect.w = DIMENSION*env->cell_size + 20;
         SDL_RenderCopy(env->renderer, env->background, NULL, &rect);
@@ -331,14 +342,14 @@ void disp_board(Env *env) {
     /* draw black lines to make te board */
     SDL_SetRenderDrawColor(env->renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
     for (int i = 0; i <= DIMENSION; i++) {
-        SDL_RenderDrawLine(env->renderer, MARGIN_LEFT, MARGIN_TOP+i*env->cell_size, MARGIN_LEFT+DIMENSION*env->cell_size, MARGIN_TOP+i*env->cell_size);
-        SDL_RenderDrawLine(env->renderer, MARGIN_LEFT+i*env->cell_size, MARGIN_TOP, MARGIN_LEFT+i*env->cell_size, MARGIN_TOP+DIMENSION*env->cell_size);
+        SDL_RenderDrawLine(env->renderer, env->margin_left, env->margin_top+i*env->cell_size, env->margin_left+DIMENSION*env->cell_size, env->margin_top+i*env->cell_size);
+        SDL_RenderDrawLine(env->renderer, env->margin_left+i*env->cell_size, env->margin_top, env->margin_left+i*env->cell_size, env->margin_top+DIMENSION*env->cell_size);
     }
 
     for (int line = 0; line < DIMENSION; line++) {
         for (int column = 0; column < DIMENSION; column++) {
-            rect.x = MARGIN_LEFT + env->cell_size*column;
-            rect.y = MARGIN_TOP + env->cell_size*(DIMENSION-1 - line);
+            rect.x = env->margin_left + env->cell_size*column;
+            rect.y = env->margin_top + env->cell_size*(DIMENSION-1 - line);
             rect.w = env->cell_size;
             rect.h = env->cell_size;
 
@@ -441,6 +452,9 @@ Env *create_env() {
         fprintf(stderr, "Erreur : %s\n", SDL_GetError());
         exit(EXIT_FAILURE);
     }
+
+    env->margin_left = MARGIN_LEFT;
+    env->margin_top = MARGIN_TOP;
     
     env->message[0] = 0; // message = ""
     env->font = TTF_OpenFont("assets/ubuntu.ttf", 30);
@@ -514,13 +528,13 @@ void disp_message(Env *env) {
         rect.w = window_w-15;
         rect.h = rect.h * rect.w/tmp;
     }
-    if (rect.h > MARGIN_TOP) {
+    if (rect.h > env->margin_top) {
         tmp = rect.h;
-        rect.h = MARGIN_TOP-10;
+        rect.h = env->margin_top-10;
         rect.w = rect.w * rect.h/tmp;
     }
     rect.x = window_w/2 - rect.w/2;
-    rect.y = MARGIN_TOP/2 - rect.h/2;
+    rect.y = env->margin_top/2 - rect.h/2;
     SDL_RenderCopy(env->renderer, texture, NULL, &rect);
 }
 
@@ -553,7 +567,6 @@ void drag_initial_pieces(Env *env, SDL_Event *event) {
                         env->disp_stage = INGAME;
                         sprintf(env->message, "%s, à toi de commencer à jouer !", player_name(env, env->current_player));
                     } else {
-                        place_initial_pieces(env);
                         sprintf(env->message, "%s, place tes pions.", player_name(env, env->current_player));
                         enable_initial_pieces(env);
                     }
@@ -684,19 +697,13 @@ bool process_event(Env *env, SDL_Event *event) {
         return true;
     }
 
-    if (event->type == SDL_WINDOWEVENT && event->window.event == SDL_WINDOWEVENT_RESIZED) {
-        if (env->disp_stage == CONFIG) {
-            place_menu_sprites(env);
-        } else if (env->disp_stage == END) {
-            place_end_buttons(env);
-        } else {
-            calculate_cell_size(env);
-            if (env->disp_stage == PLACEMENT) {
-                place_initial_pieces(env);
-            } else if (env->disp_stage == INGAME) {
-                place_controls(env);
-            }
-        }
+    if (event->type == SDL_WINDOWEVENT) {
+        calculate_cell_size(env);
+        place_menu_sprites(env);
+        place_end_buttons(env);        
+        place_initial_pieces(env);
+        place_controls(env);
+
         return false;
     }
 
@@ -722,7 +729,6 @@ bool process_event(Env *env, SDL_Event *event) {
         if (env->disp_stage == END) {
             return end_choices(env, event);
         }
-
     } 
 
     return false;
