@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include "display.h"
 #include <time.h>
 
 #define MAX_RANDOM_TRIES 10
