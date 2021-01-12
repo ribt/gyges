@@ -160,10 +160,10 @@ void place_menu_sprites(Env *env) {
 
     SDL_GetWindowSize(env->window, &window_w, &window_h);
 
-    env->menu_buttons[0].rect.x = window_w/2 - env->menu_buttons[0].rect.w/2;       //TITLE
+    env->menu_buttons[0].rect.x = window_w/2 - env->menu_buttons[0].rect.w/2;   // TITLE
     env->menu_buttons[0].rect.y = window_h/8;
 
-    env->menu_buttons[1].rect.x = env->menu_buttons[1].rect.w/8;       // swap autorisé :
+    env->menu_buttons[1].rect.x = window_w/8;       // swap autorisé :
     env->menu_buttons[1].rect.y = window_h/2;
 
     env->checkbox.rect.x = env->menu_buttons[1].rect.x + env->menu_buttons[1].rect.w + 10;
@@ -174,11 +174,11 @@ void place_menu_sprites(Env *env) {
     env->menu_buttons[2].rect.x = env->menu_buttons[1].rect.x;       //PVC
     env->menu_buttons[2].rect.y = window_h/2 + window_h/10;
 
-    env->menu_buttons[3].rect.x = env->menu_buttons[1].rect.x - env->menu_buttons[3].rect.w/8;
+    env->menu_buttons[3].rect.x = window_w/20;
     env->menu_buttons[3].rect.y = env->menu_buttons[2].rect.y + env->menu_buttons[2].rect.h + 10;
 
     for (int i = 4; i <= 6; i++) {
-        env->menu_buttons[i].rect.x = env->menu_buttons[i-1].rect.x + env->menu_buttons[i-1].rect.w + window_w/15;
+        env->menu_buttons[i].rect.x = env->menu_buttons[i-1].rect.x + env->menu_buttons[i-1].rect.w + window_w/20;
         env->menu_buttons[i].rect.y = env->menu_buttons[i-1].rect.y;
     }
 }
