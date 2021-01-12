@@ -22,13 +22,6 @@ path NULL_PATH = {
 };
 
 void set_difficulty(level choice) {
-    switch(choice) {
-        case EASY: printf("Niveau : facile\n"); break;
-        case MEDIUM: printf("Niveau : moyen\n"); break;
-        case HARD: printf("Niveau : dur\n"); break;
-        default: return;
-    }
-
     difficulty = choice;
 }
 
