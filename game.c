@@ -59,7 +59,7 @@ typedef struct {
     char message[100];
     struct sprite menu_buttons[4];
     struct checkbox_s checkbox;
-    struct checkbox_s difficulties[4];
+    struct sprite difficulties[4];
     struct sprite end_buttons[3];
 } Env;
 
@@ -316,9 +316,10 @@ void destroy_env(Env *env) {
 
     for (int i = 0; i < 2; i++) {
         SDL_DestroyTexture(env->checkbox.textures[i]);
-        for (int j = 0; j <= 3; j++) {
-            SDL_DestroyTexture(env->difficulties[j].textures[i]);
-        }
+    }
+
+    for (int i = 0; i < 4; i++) {
+        SDL_DestroyTexture(env->difficulties[i].texture);
     }
 
     for (int i = 0; i < 3; i++) {
@@ -421,26 +422,19 @@ void init_menu_sprites(Env *env) {
     env->checkbox.textures[0] = IMG_LoadTexture(env->renderer, "assets/unchecked.png");
     env->checkbox.textures[1] = IMG_LoadTexture(env->renderer, "assets/checked.png");
 
-    env->difficulties[0].textures[0] = IMG_LoadTexture(env->renderer, "assets/aucun.png");
-    env->difficulties[0].textures[1] = IMG_LoadTexture(env->renderer, "assets/aucun_selected.png");
-
-    env->difficulties[1].textures[0] = IMG_LoadTexture(env->renderer, "assets/facile.png");
-    env->difficulties[1].textures[1] = IMG_LoadTexture(env->renderer, "assets/facile_selected.png");
-    
-    env->difficulties[2].textures[0] = IMG_LoadTexture(env->renderer, "assets/moyen.png");
-    env->difficulties[2].textures[1] = IMG_LoadTexture(env->renderer, "assets/moyen_selected.png");
-    
-    env->difficulties[3].textures[0] = IMG_LoadTexture(env->renderer, "assets/difficile.png");
-    env->difficulties[3].textures[1] = IMG_LoadTexture(env->renderer, "assets/difficile_selected.png");
+    env->difficulties[0].texture = IMG_LoadTexture(env->renderer, "assets/aucun.png");
+    env->difficulties[1].texture = IMG_LoadTexture(env->renderer, "assets/facile.png");
+    env->difficulties[2].texture = IMG_LoadTexture(env->renderer, "assets/moyen.png");
+    env->difficulties[3].texture = IMG_LoadTexture(env->renderer, "assets/difficile.png");
 
     for (int i = 0; i < 2; i++) {
         if(!env->checkbox.textures[i]) {fprintf(stderr, "IMG_LoadTexture: %s\n", IMG_GetError());}
         SDL_QueryTexture(env->checkbox.textures[i], NULL, NULL, &env->checkbox.rect.w, &env->checkbox.rect.h);
+    }
 
-        for (int j = 0; j <= 3; j++) {
-            if(!env->difficulties[j].textures[i]) {fprintf(stderr, "IMG_LoadTexture: %s\n", IMG_GetError());}
-            SDL_QueryTexture(env->difficulties[j].textures[i], NULL, NULL, &env->difficulties[j].rect.w, &env->difficulties[j].rect.h);
-        }
+    for (int i = 0; i <= 3; i++) {
+        if(!env->difficulties[i].texture) {fprintf(stderr, "IMG_LoadTexture: %s\n", IMG_GetError());}
+        SDL_QueryTexture(env->difficulties[i].texture, NULL, NULL, &env->difficulties[i].rect.w, &env->difficulties[i].rect.h);
     }
 
     place_menu_sprites(env);
@@ -655,10 +649,11 @@ void disp_menu(Env *env) {
 
     for (int i = 0; i <= 3; i++) {
         if (env->selected_difficuly == i-1) {
-            SDL_RenderCopy(env->renderer, env->difficulties[i].textures[1], NULL, &env->difficulties[i].rect);
+            SDL_SetTextureAlphaMod(env->difficulties[i].texture, 255);
         } else {
-            SDL_RenderCopy(env->renderer, env->difficulties[i].textures[0], NULL, &env->difficulties[i].rect);
+            SDL_SetTextureAlphaMod(env->difficulties[i].texture, 150);
         }
+        SDL_RenderCopy(env->renderer, env->difficulties[i].texture, NULL, &env->difficulties[i].rect);
     }
 }
 
