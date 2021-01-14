@@ -178,6 +178,8 @@ Env *create_env() {
         exit(EXIT_FAILURE);
     }
 
+    SDL_SetRenderDrawBlendMode(env->renderer, SDL_BLENDMODE_BLEND);
+
     env->margin_left = MARGIN_LEFT;
     env->margin_top = MARGIN_TOP;
     
@@ -618,23 +620,22 @@ void place_end_buttons(Env *env) {
 void clear_screen(Env *env) {
     SDL_Rect rect;
 
-    /* background in gray */
-    SDL_SetRenderDrawColor(env->renderer, 160, 160, 160, 255); 
-    SDL_RenderClear(env->renderer);
+    SDL_RenderCopy(env->renderer, env->background, NULL, NULL); 
 
     if (env->disp_stage != CONFIG) {
         rect.x = env->margin_left - 10;
         rect.y = env->margin_top - 10;
         rect.h = DIMENSION*env->cell_size + 20;
         rect.w = DIMENSION*env->cell_size + 20;
-        SDL_RenderCopy(env->renderer, env->background, NULL, &rect);
+        SDL_SetRenderDrawColor(env->renderer,   139, 93, 46, 255);
+        SDL_RenderFillRect(env->renderer, &rect);
     }    
 }
 
 void disp_sprites(Env *env, struct sprite sprites[], int len) {
     for (int i = 0; i < len; i++) {
         if (env->disp_stage == END) { // opaque background
-            SDL_SetRenderDrawColor(env->renderer, 160, 160, 160, 255);
+            SDL_SetRenderDrawColor(env->renderer, 255, 255, 255, 50);
             SDL_RenderFillRect(env->renderer, &sprites[i].rect);
         }
         SDL_RenderCopy(env->renderer, sprites[i].texture, NULL, &sprites[i].rect);
