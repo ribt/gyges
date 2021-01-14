@@ -72,6 +72,7 @@ void disp_sprites(Env *env, struct sprite sprites[], int len);
 void end_of_turn(Env *env);
 void play_as_bot(Env *env);
 
+
 int initial_piece_clicked(Env *env, int x, int y);
 int sprite_clicked(int x, int y, struct sprite sprites[], int len);
 position position_clicked(Env *env, int x, int y);
@@ -100,6 +101,7 @@ void disp_message(Env *env);
 void disp_initial_pieces(Env *env);
 void disp_board(Env *env);
 void disp_controls(Env *env);
+void disp_winner_piece(Env *env);
 
 
 // Functions used to process events:
@@ -208,7 +210,6 @@ void render(Env *env) {
     if (env->disp_stage == CONFIG) {
         disp_menu(env);
     } else {
-        disp_message(env);
         disp_board(env);
         if (env->disp_stage == PLACEMENT) {
             disp_initial_pieces(env);
@@ -217,8 +218,10 @@ void render(Env *env) {
                 disp_controls(env);       
             }
         } else if (env->disp_stage == END) {
+            disp_winner_piece(env);
             disp_sprites(env, env->end_buttons, 3);
         }
+        disp_message(env);
     }
 }
 
@@ -765,6 +768,46 @@ void disp_controls(Env *env) {
     }
 }
 
+void disp_winner_piece(Env *env) {
+    size winner_piece = NONE;
+    int count, window_w;
+    SDL_Rect rect;
+
+    SDL_GetWindowSize(env->window, &window_w, NULL);
+
+    for (size s = ONE; s <= THREE; s++) { // find the winner's piece size (API's lack)
+        count = 0;
+
+        for (int line = 0; line < DIMENSION; line++) {
+            for (int column = 0; column < DIMENSION; column++) {
+                if (get_piece_size(env->game, line, column) == s) {
+                    count++;
+                }
+            }
+        }
+
+        if (count < NB_INITIAL_PIECES*NB_PLAYERS) {
+            winner_piece = s;
+        }
+    }
+    
+    if (winner_piece == NONE) {
+        return;
+    }
+
+    rect.h = env->cell_size;
+    rect.w = env->cell_size;
+    rect.x = env->margin_left + DIMENSION*env->cell_size/2 - rect.w/2;
+
+    if (get_winner(env->game) == SOUTH_P) {
+        rect.y = env->margin_top - rect.h - 10;
+    } else {
+        rect.y = env->margin_top + env->cell_size*DIMENSION + 10;
+    }
+
+    SDL_RenderCopy(env->renderer, env->pieces[winner_piece-1], NULL, &rect);
+}
+
 int sprite_clicked(int x, int y, struct sprite sprites[], int len) {
     for (int i = 0; i < len; i++) {
         if (point_in_rect(x, y, sprites[i].rect)) {
@@ -779,10 +822,6 @@ int initial_piece_clicked(Env *env, int x, int y) {
     for (int i = 0; i <= DIMENSION; i++) {
         if (point_in_rect(x, y, env->initial_pieces[i].rect)) {
             return i;
-    for (int i = 0; i < 2; i++) {
-        SDL_DestroyTexture(env->checkbox.textures[i]);
-        for (int j = 0; j <= 3; j++) {
-            SDL_DestroyTexture(env->difficulties[j].textures[i]);
         }
     }
     return -1;
