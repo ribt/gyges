@@ -617,6 +617,9 @@ void place_end_buttons(Env *env) {
 
 void clear_screen(Env *env) {
     SDL_Rect rect;
+    int window_w, window_h;
+
+    SDL_GetWindowSize(env->window, &window_w, &window_h);
 
     /* background in gray */
     SDL_SetRenderDrawColor(env->renderer, 160, 160, 160, 255); 
@@ -628,7 +631,7 @@ void clear_screen(Env *env) {
         rect.h = DIMENSION*env->cell_size + 20;
         rect.w = DIMENSION*env->cell_size + 20;
         SDL_RenderCopy(env->renderer, env->background, NULL, &rect);
-    }    
+    }
 }
 
 void disp_sprites(Env *env, struct sprite sprites[], int len) {
@@ -684,6 +687,8 @@ void disp_message(Env *env) {
     rect.x = window_w/2 - rect.w/2;
     rect.y = env->margin_top/2 - rect.h/2;
     SDL_RenderCopy(env->renderer, texture, NULL, &rect);
+
+    if(!env->background) fprintf(stderr, "IMG_LoadTexture: %s\n", IMG_GetError());
 }
 
 void disp_board(Env *env) {
@@ -768,10 +773,15 @@ int sprite_clicked(int x, int y, struct sprite sprites[], int len) {
     return -1;
 }
 
+
 int initial_piece_clicked(Env *env, int x, int y) {
     for (int i = 0; i <= DIMENSION; i++) {
         if (point_in_rect(x, y, env->initial_pieces[i].rect)) {
             return i;
+    for (int i = 0; i < 2; i++) {
+        SDL_DestroyTexture(env->checkbox.textures[i]);
+        for (int j = 0; j <= 3; j++) {
+            SDL_DestroyTexture(env->difficulties[j].textures[i]);
         }
     }
     return -1;
