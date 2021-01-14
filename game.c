@@ -45,6 +45,7 @@ typedef struct {
     struct sprite controls[7];
     int cell_size;
     board game;
+    SDL_Texture *victoryslot[2];
     SDL_Texture *background;
     player current_player;
     bool swap_allowed;
@@ -332,6 +333,9 @@ int initial_piece_clicked(Env *env, int x, int y) {
 
 void clear_screen(Env *env) {
     SDL_Rect rect;
+    int window_w, window_h;
+
+    SDL_GetWindowSize(env->window, &window_w, &window_h);
 
     /* background in gray */
     SDL_SetRenderDrawColor(env->renderer, 160, 160, 160, 255); 
@@ -343,13 +347,29 @@ void clear_screen(Env *env) {
         rect.h = DIMENSION*env->cell_size + 20;
         rect.w = DIMENSION*env->cell_size + 20;
         SDL_RenderCopy(env->renderer, env->background, NULL, &rect);
-    }    
+//    }
+
+//    if (env->disp_stage != CONFIG && env->disp_stage != PLACEMENT) {
+        rect.x = rect.x + (DIMENSION*env->cell_size + 20)/2 - (env->cell_size * 1.5)/2;
+        rect.y = window_h - env->cell_size * 1.5;
+        rect.h = env->cell_size * 1.5;
+        rect.w = env->cell_size * 1.5;
+        SDL_RenderCopy(env->renderer, env->victoryslot[1], NULL, &rect); //BOTTOM
+
+        rect.y = env->margin_top - env->cell_size;
+        SDL_RenderCopy(env->renderer, env->victoryslot[0], NULL, &rect); //TOP
+    }
 }
 
 void init_background(Env *env) {
     env->background = IMG_LoadTexture(env->renderer, "assets/background.png");
 
     if(!env->background) fprintf(stderr, "IMG_LoadTexture: %s\n", IMG_GetError());
+
+    for (int i = 0; i < 2; i++) {
+        env->victoryslot[i] = IMG_LoadTexture(env->renderer, "assets/victoryslot.png");
+        if(!env->victoryslot[i]) fprintf(stderr, "IMG_LoadTexture: %s\n", IMG_GetError());
+    }
 }
 
 void disp_board(Env *env) {
@@ -529,6 +549,7 @@ void destroy_env(Env *env) {
 
     for (int i = 0; i < 2; i++) {
         SDL_DestroyTexture(env->checkbox.textures[i]);
+        SDL_DestroyTexture(env->victoryslot[i]);
         for (int j = 0; j <= 3; j++) {
             SDL_DestroyTexture(env->difficulties[j].textures[i]);
         }
