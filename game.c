@@ -130,7 +130,7 @@ void place_end_buttons(Env *env);
 void destroy_env(Env *env);
 
 
-int main(int argc, char const *argv[]) {
+int main(int argc, char *argv[]) {
     Env *env;
     SDL_Event event;
     bool quit = false;
