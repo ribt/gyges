@@ -334,9 +334,7 @@ void remote_plays(Env *env) {
         return;
     }
     if (env->disp_stage == PLACEMENT) {
-        printf("\nattente d'une pièce pour placer\n");
         if (recv(env->socket, &r_piece, sizeof(piece), 0) != SOCKET_ERROR) {
-            printf("reçu : size=%d line=%d column=%d\n", r_piece.size, r_piece.position.line, r_piece.position.column);
             place_piece(env->game, r_piece.size, env->SOCKET_P, r_piece.position.column);
             done = true;
             for (size s = ONE; s <= THREE; s++) {
@@ -358,18 +356,18 @@ void remote_plays(Env *env) {
     }
     else if (env->disp_stage == INGAME) {
         if (picked_piece_size(env->game) == NONE) {
-            printf("\nattente d'une pièce pour picker\n");
             if (recv(env->socket, &r_piece, sizeof(piece), 0) != SOCKET_ERROR) {
-                printf("reçu : size=%d line=%d column=%d\n", r_piece.size, r_piece.position.line, r_piece.position.column);
                 pick_piece(env->game, env->SOCKET_P, r_piece.position.line, r_piece.position.column);
             } else {printf("erreur\n");}
         } else {
-            printf("\nattente d'une direction\n");
             if (recv(env->socket, &r_direction, sizeof(direction), 0) != SOCKET_ERROR) {
-                printf("reçu : %d\n", r_direction);
-                move_piece(env->game, r_direction);
-                if (movement_left(env->game) == -1) {
-                    end_of_turn(env);
+                if (r_direction == 5) {
+                    cancel_step(env->game);
+                } else {
+                    move_piece(env->game, r_direction);
+                    if (movement_left(env->game) == -1) {
+                        end_of_turn(env);
+                    }
                 }
             } else {printf("erreur\n");}
         }
@@ -422,26 +420,20 @@ void destroy_env(Env *env) {
 }
 
 char *player_name(Env *env, player this_player) {
-    if (env->BOT_P == NO_PLAYER && env->SOCKET_P == NO_PLAYER) {
+    if (env->BOT_P == NO_PLAYER) {
         if (this_player == SOUTH_P) {
             return "Joueur SUD";
         }
         if (this_player == NORTH_P) {
             return "Joueur NORD";
         }
-    } else if (env->BOT_P != NO_PLAYER) {
+    } else {
         if (this_player == env->BOT_P) {
             return "Robot";
         } else {
             return "Humain";
         }
-    } else {
-        if (this_player == env->SOCKET_P) {
-            return "Distant";
-        } else {
-            return "Local";
-        }
-    }
+    } 
     
     return "";
 }
@@ -489,8 +481,13 @@ void start_game(Env *env) {
         render(env);
         SDL_RenderPresent(env->renderer);
         SDL_Delay(3000);
-    } 
-    sprintf(env->message, "%s, place tes pions !", player_name(env, env->current_player));
+    }
+    if (env->current_player == env->SOCKET_P) {
+        sprintf(env->message, "%s place ses pions...", player_name(env, env->current_player));
+
+    } else {
+        sprintf(env->message, "%s, place tes pions !", player_name(env, env->current_player));
+    }
     env->disp_stage = PLACEMENT;
 }
 
@@ -1075,7 +1072,11 @@ void drag_initial_pieces(Env *env, SDL_Event *event) {
                     env->current_player = next_player(env->current_player);
                     if (nb_pieces_available(env->game, ONE, env->current_player) == 0) {
                         env->disp_stage = INGAME;
-                        sprintf(env->message, "%s, à toi de commencer à jouer !", player_name(env, env->current_player));
+                        if (env->current_player == env->SOCKET_P) {
+                            sprintf(env->message, "%s commence à jouer...", player_name(env, env->current_player));
+                        } else {
+                            sprintf(env->message, "%s, à toi de commencer à jouer !", player_name(env, env->current_player));
+                        }
                     } else {
                         sprintf(env->message, "%s, place tes pions.", player_name(env, env->current_player));
                         if (env->current_player != env->BOT_P && env->current_player != env->SOCKET_P) {
@@ -1108,6 +1109,12 @@ void choose_direction(Env *env, SDL_Event *event) {
 
     dir_clicked = sprite_clicked(event->button.x, event->button.y, env->controls, 7);
 
+    if (dir_clicked != -1 && env->SOCKET_P != NO_PLAYER) {
+        s_direction = dir_clicked;
+            if (send(env->socket, &s_direction, sizeof(direction), 0) == SOCKET_ERROR)
+                printf("L'envoi a échoué\n");
+    }
+
     if (dir_clicked == 5) { // cancel
         cancel_step(env->game);
     }
@@ -1120,11 +1127,6 @@ void choose_direction(Env *env, SDL_Event *event) {
     }
     else if (dir_clicked != -1) {
         move_piece(env->game, dir_clicked);
-        if (env->SOCKET_P != NO_PLAYER) {
-            s_direction = dir_clicked;
-            if (send(env->socket, &s_direction, sizeof(direction), 0) == SOCKET_ERROR)
-                printf("L'envoi a échoué\n");
-        }
     }
 
     if (movement_left(env->game) == 0) {
@@ -1176,7 +1178,11 @@ void end_of_turn(Env *env) {
 
     if (winner == NO_PLAYER) {
         env->current_player = next_player(env->current_player);
-        sprintf(env->message, "À ton tour %s", player_name(env, env->current_player));
+        if (env->current_player == env->SOCKET_P) {
+            sprintf(env->message, "En attente de l'autre joueur...");
+        } else {
+            sprintf(env->message, "À ton tour %s", player_name(env, env->current_player));
+        }
     } else {
         env->disp_stage = END;
         env->current_player = NO_PLAYER;
@@ -1186,8 +1192,22 @@ void end_of_turn(Env *env) {
             } else {
                 sprintf(env->message, "Bien joué humain !");
             }
-        } else {
+        } else if (env->SOCKET_P != NO_PLAYER) {
+            if (winner == env->SOCKET_P) {
+                sprintf(env->message, "Tu as perdu");
+            } else {
+                sprintf(env->message, "Tu as gagné !");
+            }
+        }
+        else {
             sprintf(env->message, "Victoire du %s !", player_name(env, get_winner(env->game)));
-        }                
+        }
+
+        if (env->SOCKET_P != NORTH_P) {
+            c_close(env->socket);
+        }
+        if (env->SOCKET_P != SOUTH_P) {
+            s_close(env->serv_sockets);
+        }
     }
 }
