@@ -66,7 +66,7 @@ typedef struct {
     struct available_piece initial_pieces[DIMENSION];
     char message[100];
     struct sprite title_sprites[5];
-    struct sprite solo_sprites[1];
+    struct sprite solo_sprites[2];
     struct sprite multi_sprites[3];
     struct checkbox_s checkbox;
     struct sprite difficulties[3];
@@ -509,7 +509,7 @@ void init_title_sprites(Env *env) {
 
     env->title_sprites[2].texture = IMG_LoadTexture(env->renderer, "assets/solo.png");
     env->title_sprites[3].texture = IMG_LoadTexture(env->renderer, "assets/multi.png");
-    env->title_sprites[4].texture = IMG_LoadTexture(env->renderer, "assets/go.png");
+    env->title_sprites[4].texture = IMG_LoadTexture(env->renderer, "assets/back.png");
 
     for (int i = 0; i <= 4; i++) {
         SDL_QueryTexture(env->title_sprites[i].texture, NULL, NULL, &env->title_sprites[i].rect.w, &env->title_sprites[i].rect.h);
@@ -535,6 +535,10 @@ void init_solo_sprites(Env *env) {
     env->solo_sprites[0].texture = SDL_CreateTextureFromSurface(env->renderer, TTF_RenderUTF8_Solid(font, "Niveau de l'ordinateur :", black));
     SDL_QueryTexture(env->solo_sprites[0].texture, NULL, NULL, &env->solo_sprites[0].rect.w, &env->solo_sprites[0].rect.h);
     TTF_CloseFont(font);
+
+    env->solo_sprites[1].texture = IMG_LoadTexture(env->renderer, "assets/go.png");
+    if(!env->solo_sprites[1].texture) {fprintf(stderr, "IMG_LoadTexture: %s\n", IMG_GetError());}
+    SDL_QueryTexture(env->solo_sprites[1].texture, NULL, NULL, &env->solo_sprites[1].rect.w, &env->solo_sprites[1].rect.h);
 
     env->difficulties[0].texture = IMG_LoadTexture(env->renderer, "assets/facile.png");
     env->difficulties[1].texture = IMG_LoadTexture(env->renderer, "assets/moyen.png");
@@ -665,11 +669,11 @@ void place_title_sprites(Env *env) {
     env->title_sprites[3].rect.x = window_w/2 + 10;   // MULTI
     env->title_sprites[3].rect.y = window_h/2 - env->title_sprites[3].rect.h/2;
 
+    env->title_sprites[4].rect.x = 15;   // back
+    env->title_sprites[4].rect.y = 15;
+
     place_solo_sprites(env);
     place_multi_sprites(env);
-
-    env->title_sprites[4].rect.x = window_w/2 - env->title_sprites[4].rect.w/2; // GO
-    env->title_sprites[4].rect.y = 4*window_h/5;
 }
 
 void place_solo_sprites(Env *env) {
@@ -684,6 +688,9 @@ void place_solo_sprites(Env *env) {
         env->difficulties[i].rect.x = window_w/2 + (i-1)*(env->difficulties[i].rect.w + 20) - env->difficulties[i].rect.w/2;
         env->difficulties[i].rect.y = env->solo_sprites[0].rect.y + env->solo_sprites[0].rect.h + 20;
     }
+
+    env->solo_sprites[1].rect.x = window_w/2 - env->solo_sprites[1].rect.w/2; // GO
+    env->solo_sprites[1].rect.y = 4*window_h/5;
 }
 
 void place_multi_sprites(Env *env) {
@@ -802,6 +809,7 @@ void disp_titlescreen(Env *env) {
     else {
         if (env->disp_stage == SOLO) {
             SDL_RenderCopy(env->renderer, env->solo_sprites[0].texture, NULL, &env->solo_sprites[0].rect);
+            SDL_RenderCopy(env->renderer, env->title_sprites[4].texture, NULL, &env->title_sprites[4].rect);
 
             for (int i = 0; i < 3; i++) {
                 if (env->selected_difficulty == i) {
@@ -812,9 +820,10 @@ void disp_titlescreen(Env *env) {
                 SDL_RenderCopy(env->renderer, env->difficulties[i].texture, NULL, &env->difficulties[i].rect);
             }
 
-            SDL_RenderCopy(env->renderer, env->title_sprites[4].texture, NULL, &env->title_sprites[4].rect); 
+            SDL_RenderCopy(env->renderer, env->solo_sprites[1].texture, NULL, &env->solo_sprites[1].rect); 
         }
         if (env->disp_stage == MULTI) {
+            SDL_RenderCopy(env->renderer, env->title_sprites[4].texture, NULL, &env->title_sprites[4].rect);
             disp_sprites(env, env->multi_sprites, 3);
         }
         
@@ -1013,14 +1022,25 @@ void menu_choices(Env *env, SDL_Event *event) {
     }
 
     if (env->disp_stage == SOLO) {
+        if (point_in_rect(event->button.x, event->button.y, env->title_sprites[4].rect)) {
+            env->disp_stage = TITLE;
+            return;
+        }
         for (int i = 0; i < 3; i++) {
             if (point_in_rect(event->button.x, event->button.y, env->difficulties[i].rect)) {    
                 env->selected_difficulty = i;
             }
         }
+        if (point_in_rect(event->button.x, event->button.y, env->solo_sprites[1].rect)) {
+            start_game(env);
+        }
     }
 
     if (env->disp_stage == MULTI) {
+        if (point_in_rect(event->button.x, event->button.y, env->title_sprites[4].rect)) {
+            env->disp_stage = TITLE;
+            return;
+        }
         if (point_in_rect(event->button.x, event->button.y, env->multi_sprites[0].rect)) {    
             env->SOCKET_P = NO_PLAYER;
             start_game(env);
