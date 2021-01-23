@@ -7,6 +7,7 @@
 #include <SDL2/SDL_ttf.h>
 #include "board.h"
 #include "bot.h"
+#include "socket.h"
 
 #define SCREEN_W 750
 #define SCREEN_H 600
@@ -15,6 +16,7 @@
 #define MARGIN_TOP 120
 #define MARGIN_BOTTOM 100
 #define DELAY 10
+#define PORT 2002
 
 struct sprite {
     SDL_Texture *texture;
@@ -32,8 +34,8 @@ struct available_piece {
 };
 
 
-// There are 4 display stages
-enum stage {CONFIG, PLACEMENT, INGAME, END};
+// display stages
+enum stage {TITLE, SOLO, MULTI, PLACEMENT, INGAME, END};
 
 // "global" variables used by all the functions
 typedef struct {
@@ -51,16 +53,21 @@ typedef struct {
     SDL_Texture *background;
     player current_player;
     bool swap_allowed;
-    int selected_difficuly;
+    int selected_difficulty;
     player BOT_P;
+    player SOCKET_P;
     move bot_move;
     int dragging_piece;
     struct available_piece initial_pieces[DIMENSION];
     char message[100];
-    struct sprite menu_buttons[4];
+    struct sprite title_sprites[5];
+    struct sprite solo_sprites[1];
+    struct sprite multi_sprites[3];
     struct checkbox_s checkbox;
-    struct sprite difficulties[4];
+    struct sprite difficulties[3];
     struct sprite end_buttons[3];
+    struct server_sockets serv_sockets;
+    SOCKET socket;
 } Env;
 
 
@@ -83,7 +90,9 @@ position position_clicked(Env *env, int x, int y);
 Env *create_env();
 void start_game(Env *env);
 
-void init_menu_sprites(Env *env);
+void init_title_sprites(Env *env);
+void init_solo_sprites(Env *env);
+void init_multi_sprites(Env *env);
 void init_pieces(Env *env);
 void enable_initial_pieces(Env *env);
 void init_background(Env *env);
@@ -96,7 +105,7 @@ void init_end_buttons(Env *env);
 void render(Env *env);
 
 void clear_screen(Env *env);
-void disp_menu(Env *env);
+void disp_titlescreen(Env *env);
 void disp_message(Env *env);
 void disp_initial_pieces(Env *env);
 void disp_board(Env *env);
@@ -118,7 +127,9 @@ bool end_choices(Env *env, SDL_Event *event);
 
 // Functions to adapt the display when the window is resized:
 
-void place_menu_sprites(Env *env);
+void place_title_sprites(Env *env);
+void place_solo_sprites(Env *env);
+void place_multi_sprites(Env *env);
 void calculate_cell_size(Env * env);
 void place_initial_pieces(Env *env);
 void place_controls(Env *env);
@@ -191,11 +202,13 @@ Env *create_env() {
 
     env->dragging_piece = -1;
     env->swap_allowed = false;
-    env->selected_difficuly = -1;   
+    env->selected_difficulty = 2;   
     env->BOT_P = NO_PLAYER;
 
     calculate_cell_size(env);
-    init_menu_sprites(env);
+    init_title_sprites(env);
+    init_solo_sprites(env);
+    init_multi_sprites(env);
     init_background(env);
     init_pieces(env);
     init_controls(env); 
@@ -207,8 +220,8 @@ Env *create_env() {
 void render(Env *env) {
     clear_screen(env);
 
-    if (env->disp_stage == CONFIG) {
-        disp_menu(env);
+    if (env->disp_stage < PLACEMENT) {
+        disp_titlescreen(env);
     } else {
         disp_board(env);
         if (env->disp_stage == PLACEMENT) {
@@ -232,7 +245,7 @@ bool process_event(Env *env, SDL_Event *event) {
 
     if (event->type == SDL_WINDOWEVENT) {
         calculate_cell_size(env);
-        place_menu_sprites(env);
+        place_title_sprites(env);
         place_initial_pieces(env);
         place_controls(env);
         place_end_buttons(env);
@@ -245,7 +258,7 @@ bool process_event(Env *env, SDL_Event *event) {
     }
 
     if (event->type == SDL_MOUSEBUTTONUP && event->button.button == 1) { // left click
-        if (env->disp_stage == CONFIG) {
+        if (env->disp_stage < PLACEMENT) {
             menu_choices(env, event);
         }
 
@@ -310,15 +323,21 @@ void destroy_env(Env *env) {
     SDL_DestroyTexture(env->background);
     TTF_CloseFont(env->font);
 
-    for (int i = 0; i < 4; i++) {
-        SDL_DestroyTexture(env->menu_buttons[i].texture);
+    for (int i = 0; i <= 4; i++) {
+        SDL_DestroyTexture(env->title_sprites[i].texture);
+    }
+
+    SDL_DestroyTexture(env->solo_sprites[0].texture);
+
+    for (int i = 0; i <= 2; i++) {
+        SDL_DestroyTexture(env->multi_sprites[i].texture);
     }
 
     for (int i = 0; i < 2; i++) {
         SDL_DestroyTexture(env->checkbox.textures[i]);
     }
 
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 3; i++) {
         SDL_DestroyTexture(env->difficulties[i].texture);
     }
 
@@ -368,13 +387,18 @@ bool point_in_rect(int x, int y, SDL_Rect rect) {
 
 void start_game(Env *env) {
     env->game = new_game();
-    env->disp_stage = PLACEMENT;
 
-    if (env->selected_difficuly == -1) {
-        env->BOT_P = NO_PLAYER;
-    } else {
+    if (env->disp_stage == SOLO) {
         env->BOT_P = NORTH_P;
-        set_difficulty(env->selected_difficuly);
+        set_difficulty(env->selected_difficulty);
+    } else {
+        env->BOT_P = NO_PLAYER;
+        if (env->SOCKET_P == SOUTH_P) { // NORTH_P always hosts
+            env->serv_sockets = host(PORT);
+            env->socket = env->serv_sockets.c_sock;
+        } else if (env->SOCKET_P == NORTH_P) {
+            env->socket = join("127.0.0.1", PORT); // TO DO : prompt IP
+        }
     }
 
     if (rand()%2 == 0) {  // random choice of the first player
@@ -383,7 +407,7 @@ void start_game(Env *env) {
         env->current_player = SOUTH_P;
     }
 
-    if (env->current_player != env->BOT_P) {
+    if (env->current_player != env->BOT_P && env->current_player != env->SOCKET_P) {
         enable_initial_pieces(env);
     }
 
@@ -394,50 +418,76 @@ void start_game(Env *env) {
         SDL_Delay(3000);
     } 
     sprintf(env->message, "%s, place tes pions !", player_name(env, env->current_player));
+    env->disp_stage = PLACEMENT;
 }
 
-void init_menu_sprites(Env *env) {
+void init_title_sprites(Env *env) {
     TTF_Font *font;
     SDL_Color black = {0, 0, 0};
 
     font = TTF_OpenFont("assets/ubuntu.ttf", 100);
 
-    env->menu_buttons[0].texture = SDL_CreateTextureFromSurface(env->renderer, TTF_RenderUTF8_Solid(font, "Gygès", black));
+    env->title_sprites[0].texture = SDL_CreateTextureFromSurface(env->renderer, TTF_RenderUTF8_Solid(font, "Gygès", black));
 
     TTF_CloseFont(font);
+
     font = TTF_OpenFont("assets/ubuntu.ttf", 50);
 
-    env->menu_buttons[1].texture = SDL_CreateTextureFromSurface(env->renderer, TTF_RenderUTF8_Solid(font, "Swap autorisé :", black));
-    env->menu_buttons[2].texture = SDL_CreateTextureFromSurface(env->renderer, TTF_RenderUTF8_Solid(font, "Niveau de l'ordinateur :", black));
-
-    TTF_CloseFont(font);
+    env->title_sprites[1].texture = SDL_CreateTextureFromSurface(env->renderer, TTF_RenderUTF8_Solid(font, "Swap autorisé :", black));
     
-    env->menu_buttons[3].texture = IMG_LoadTexture(env->renderer, "assets/go.png");
-    if(!env->menu_buttons[3].texture) {fprintf(stderr, "IMG_LoadTexture: %s\n", IMG_GetError());}
+    TTF_CloseFont(font);
 
-    for (int i = 0; i < 4; i++) {
-        SDL_QueryTexture(env->menu_buttons[i].texture, NULL, NULL, &env->menu_buttons[i].rect.w, &env->menu_buttons[i].rect.h);
+    env->title_sprites[2].texture = IMG_LoadTexture(env->renderer, "assets/solo.png");
+    env->title_sprites[3].texture = IMG_LoadTexture(env->renderer, "assets/multi.png");
+    env->title_sprites[4].texture = IMG_LoadTexture(env->renderer, "assets/go.png");
+
+    for (int i = 0; i <= 4; i++) {
+        SDL_QueryTexture(env->title_sprites[i].texture, NULL, NULL, &env->title_sprites[i].rect.w, &env->title_sprites[i].rect.h);
     }
 
     env->checkbox.textures[0] = IMG_LoadTexture(env->renderer, "assets/unchecked.png");
     env->checkbox.textures[1] = IMG_LoadTexture(env->renderer, "assets/checked.png");
-
-    env->difficulties[0].texture = IMG_LoadTexture(env->renderer, "assets/aucun.png");
-    env->difficulties[1].texture = IMG_LoadTexture(env->renderer, "assets/facile.png");
-    env->difficulties[2].texture = IMG_LoadTexture(env->renderer, "assets/moyen.png");
-    env->difficulties[3].texture = IMG_LoadTexture(env->renderer, "assets/difficile.png");
 
     for (int i = 0; i < 2; i++) {
         if(!env->checkbox.textures[i]) {fprintf(stderr, "IMG_LoadTexture: %s\n", IMG_GetError());}
         SDL_QueryTexture(env->checkbox.textures[i], NULL, NULL, &env->checkbox.rect.w, &env->checkbox.rect.h);
     }
 
-    for (int i = 0; i <= 3; i++) {
+    place_title_sprites(env);
+}
+
+void init_solo_sprites(Env *env) {
+    TTF_Font *font;
+    SDL_Color black = {0, 0, 0};
+
+    font = TTF_OpenFont("assets/ubuntu.ttf", 50);
+
+    env->solo_sprites[0].texture = SDL_CreateTextureFromSurface(env->renderer, TTF_RenderUTF8_Solid(font, "Niveau de l'ordinateur :", black));
+    SDL_QueryTexture(env->solo_sprites[0].texture, NULL, NULL, &env->solo_sprites[0].rect.w, &env->solo_sprites[0].rect.h);
+    TTF_CloseFont(font);
+
+    env->difficulties[0].texture = IMG_LoadTexture(env->renderer, "assets/facile.png");
+    env->difficulties[1].texture = IMG_LoadTexture(env->renderer, "assets/moyen.png");
+    env->difficulties[2].texture = IMG_LoadTexture(env->renderer, "assets/difficile.png");    
+
+    for (int i = 0; i < 3; i++) {
         if(!env->difficulties[i].texture) {fprintf(stderr, "IMG_LoadTexture: %s\n", IMG_GetError());}
         SDL_QueryTexture(env->difficulties[i].texture, NULL, NULL, &env->difficulties[i].rect.w, &env->difficulties[i].rect.h);
     }
 
-    place_menu_sprites(env);
+    place_solo_sprites(env);
+}
+
+void init_multi_sprites(Env *env) {
+    env->multi_sprites[0].texture = IMG_LoadTexture(env->renderer, "assets/local.png");
+    env->multi_sprites[1].texture = IMG_LoadTexture(env->renderer, "assets/host.png");
+    env->multi_sprites[2].texture = IMG_LoadTexture(env->renderer, "assets/join.png");
+
+    for (int i = 0; i <= 2; i++) {
+        SDL_QueryTexture(env->multi_sprites[i].texture, NULL, NULL, &env->multi_sprites[i].rect.w, &env->multi_sprites[i].rect.h);
+    }
+
+    place_multi_sprites(env);
 }
 
 void init_pieces(Env *env) {
@@ -523,35 +573,62 @@ void calculate_cell_size(Env * env) {
     }
 }
 
-void place_menu_sprites(Env *env) {
+void place_title_sprites(Env *env) {
     int window_w, window_h;
 
     SDL_GetWindowSize(env->window, &window_w, &window_h);
 
-    env->menu_buttons[0].rect.x = window_w/2 - env->menu_buttons[0].rect.w/2;   // TITLE
-    env->menu_buttons[0].rect.y = window_h/10;
+    env->title_sprites[0].rect.x = window_w/2 - env->title_sprites[0].rect.w/2;   // TITLE
+    env->title_sprites[0].rect.y = window_h/10;
 
-    env->menu_buttons[1].rect.x = window_w/8;       // swap autorisé :
-    env->menu_buttons[1].rect.y = 2*window_h/5;
+    env->title_sprites[1].rect.x = window_w/8;       // swap autorisé :
+    env->title_sprites[1].rect.y = 2*window_h/5;
 
-    env->checkbox.rect.x = env->menu_buttons[1].rect.x + env->menu_buttons[1].rect.w + 10;
-    env->checkbox.rect.y = env->menu_buttons[1].rect.y;
-    env->checkbox.rect.h = env->menu_buttons[1].rect.h;
+    env->checkbox.rect.x = env->title_sprites[1].rect.x + env->title_sprites[1].rect.w + 10;
+    env->checkbox.rect.y = env->title_sprites[1].rect.y;
+    env->checkbox.rect.h = env->title_sprites[1].rect.h;
     env->checkbox.rect.w = env->checkbox.rect.h;
 
-    env->menu_buttons[2].rect.x = env->menu_buttons[1].rect.x;       // Niveau de l'ordi
-    env->menu_buttons[2].rect.y = env->menu_buttons[1].rect.y + env->menu_buttons[1].rect.h + 20;
+    env->title_sprites[2].rect.x = window_w/2 - env->title_sprites[2].rect.w - 10;   // SOLO
+    env->title_sprites[2].rect.y = window_h/2 - env->title_sprites[2].rect.h/2;
 
-    env->difficulties[0].rect.x = window_w/20;
-    env->difficulties[0].rect.y = env->menu_buttons[2].rect.y + env->menu_buttons[2].rect.h + 10;
+    env->title_sprites[3].rect.x = window_w/2 + 10;   // MULTI
+    env->title_sprites[3].rect.y = window_h/2 - env->title_sprites[3].rect.h/2;
 
-    for (int i = 1; i <= 3; i++) {
-        env->difficulties[i].rect.x = env->difficulties[i-1].rect.x + env->difficulties[i-1].rect.w + window_w/20;
-        env->difficulties[i].rect.y = env->difficulties[i-1].rect.y;
+    place_solo_sprites(env);
+    place_multi_sprites(env);
+
+    env->title_sprites[4].rect.x = window_w/2 - env->title_sprites[4].rect.w/2; // GO
+    env->title_sprites[4].rect.y = 4*window_h/5;
+}
+
+void place_solo_sprites(Env *env) {
+    int window_w, window_h;
+
+    SDL_GetWindowSize(env->window, &window_w, &window_h);
+
+    env->solo_sprites[0].rect.x = window_w/2 - env->solo_sprites[0].rect.w/2;       // Niveau de l'ordi
+    env->solo_sprites[0].rect.y = env->title_sprites[0].rect.y + env->title_sprites[0].rect.h + window_h/8;
+
+    for (int i = 0; i < 3; i++) {
+        env->difficulties[i].rect.x = window_w/2 + (i-1)*(env->difficulties[i].rect.w + 20) - env->difficulties[i].rect.w/2;
+        env->difficulties[i].rect.y = env->solo_sprites[0].rect.y + env->solo_sprites[0].rect.h + 20;
     }
+}
 
-    env->menu_buttons[3].rect.x = env->difficulties[2].rect.x - window_w/40 - env->menu_buttons[3].rect.w/2;
-    env->menu_buttons[3].rect.y = env->difficulties[2].rect.y + env->difficulties[2].rect.h + window_h/15;
+void place_multi_sprites(Env *env) {
+    int window_w, window_h;
+
+    SDL_GetWindowSize(env->window, &window_w, &window_h);
+
+    env->multi_sprites[0].rect.x = window_w/2 - env->multi_sprites[0].rect.w/2;       // sur le même clavier
+    env->multi_sprites[0].rect.y = env->title_sprites[0].rect.y + env->title_sprites[0].rect.h + 50;
+
+    env->multi_sprites[1].rect.x = window_w/2 - env->multi_sprites[1].rect.w/2;       // host
+    env->multi_sprites[1].rect.y = env->multi_sprites[0].rect.y + env->multi_sprites[0].rect.h + 20;
+
+    env->multi_sprites[2].rect.x = window_w/2 - env->multi_sprites[2].rect.w/2;       // join
+    env->multi_sprites[2].rect.y = env->multi_sprites[1].rect.y + env->multi_sprites[1].rect.h + 20;
 }
 
 void place_initial_pieces(Env *env) {
@@ -622,7 +699,7 @@ void clear_screen(Env *env) {
 
     SDL_RenderCopy(env->renderer, env->background, NULL, NULL); 
 
-    if (env->disp_stage != CONFIG) {
+    if (env->disp_stage >= PLACEMENT) {
         rect.x = env->margin_left - 10;
         rect.y = env->margin_top - 10;
         rect.h = DIMENSION*env->cell_size + 20;
@@ -642,18 +719,35 @@ void disp_sprites(Env *env, struct sprite sprites[], int len) {
     }
 }
 
-void disp_menu(Env *env) {
-    disp_sprites(env, env->menu_buttons, 4);
+void disp_titlescreen(Env *env) {
+    SDL_RenderCopy(env->renderer, env->title_sprites[0].texture, NULL, &env->title_sprites[0].rect);
 
-    SDL_RenderCopy(env->renderer, env->checkbox.textures[env->swap_allowed], NULL, &env->checkbox.rect);
+    // SDL_RenderCopy(env->renderer, env->checkbox.textures[env->swap_allowed], NULL, &env->checkbox.rect);
 
-    for (int i = 0; i <= 3; i++) {
-        if (env->selected_difficuly == i-1) {
-            SDL_SetTextureAlphaMod(env->difficulties[i].texture, 255);
-        } else {
-            SDL_SetTextureAlphaMod(env->difficulties[i].texture, 150);
+    if (env->disp_stage == TITLE) {
+        SDL_RenderCopy(env->renderer, env->title_sprites[2].texture, NULL, &env->title_sprites[2].rect);
+        SDL_RenderCopy(env->renderer, env->title_sprites[3].texture, NULL, &env->title_sprites[3].rect);
+    }
+
+    else {
+        if (env->disp_stage == SOLO) {
+            SDL_RenderCopy(env->renderer, env->solo_sprites[0].texture, NULL, &env->solo_sprites[0].rect);
+
+            for (int i = 0; i < 3; i++) {
+                if (env->selected_difficulty == i) {
+                    SDL_SetTextureAlphaMod(env->difficulties[i].texture, 255);
+                } else {
+                    SDL_SetTextureAlphaMod(env->difficulties[i].texture, 150);
+                }
+                SDL_RenderCopy(env->renderer, env->difficulties[i].texture, NULL, &env->difficulties[i].rect);
+            }
+
+            SDL_RenderCopy(env->renderer, env->title_sprites[4].texture, NULL, &env->title_sprites[4].rect); 
         }
-        SDL_RenderCopy(env->renderer, env->difficulties[i].texture, NULL, &env->difficulties[i].rect);
+        if (env->disp_stage == MULTI) {
+            disp_sprites(env, env->multi_sprites, 3);
+        }
+        
     }
 }
 
@@ -834,19 +928,43 @@ position position_clicked(Env *env, int x, int y) {
 }
 
 void menu_choices(Env *env, SDL_Event *event) {
-    if (point_in_rect(event->button.x, event->button.y, env->checkbox.rect)) {
-        env->swap_allowed = !env->swap_allowed;
+
+    // if (point_in_rect(event->button.x, event->button.y, env->checkbox.rect)) {
+    //     env->swap_allowed = !env->swap_allowed;
+    // }
+
+    if (env->disp_stage == TITLE) {
+        if (point_in_rect(event->button.x, event->button.y, env->title_sprites[2].rect)) {
+            env->disp_stage = SOLO;
+        }
+        if (point_in_rect(event->button.x, event->button.y, env->title_sprites[3].rect)) {
+            env->disp_stage = MULTI;
+        }
+        return;
     }
 
-    for (int i = 0; i <= 3; i++) {
-        if (point_in_rect(event->button.x, event->button.y, env->difficulties[i].rect)) {    
-            env->selected_difficuly = i-1;
+    if (env->disp_stage == SOLO) {
+        for (int i = 0; i < 3; i++) {
+            if (point_in_rect(event->button.x, event->button.y, env->difficulties[i].rect)) {    
+                env->selected_difficulty = i;
+            }
         }
     }
-    
-    if (sprite_clicked(event->button.x, event->button.y, env->menu_buttons, 4) == 3) { // go
-        start_game(env);
-    }
+
+    if (env->disp_stage == MULTI) {
+        if (point_in_rect(event->button.x, event->button.y, env->multi_sprites[0].rect)) {    
+            env->SOCKET_P = NO_PLAYER;
+            start_game(env);
+        }
+        if (point_in_rect(event->button.x, event->button.y, env->multi_sprites[1].rect)) {    
+            env->SOCKET_P = SOUTH_P;
+            start_game(env);
+        }
+        if (point_in_rect(event->button.x, event->button.y, env->multi_sprites[2].rect)) {    
+            env->SOCKET_P = NORTH_P;
+            start_game(env);
+        }
+    }   
 }
 
 void drag_initial_pieces(Env *env, SDL_Event *event) {
@@ -948,7 +1066,7 @@ bool end_choices(Env *env, SDL_Event *event) {
     int button_clicked = sprite_clicked(event->button.x, event->button.y, env->end_buttons, 3);
 
     if (button_clicked == 0) {
-        env->disp_stage = CONFIG;
+        env->disp_stage = TITLE;
     } else if (button_clicked == 1) {
         start_game(env);
     } else if (button_clicked == 2) {
