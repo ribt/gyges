@@ -787,12 +787,27 @@ void clear_screen(Env *env) {
 }
 
 void disp_sprites(Env *env, struct sprite sprites[], int len) {
+    int mouse_x, mouse_y;
+    SDL_Rect rect;
+
     for (int i = 0; i < len; i++) {
-        if (env->disp_stage == END) { // opaque background
-            SDL_SetRenderDrawColor(env->renderer, 255, 255, 255, 50);
-            SDL_RenderFillRect(env->renderer, &sprites[i].rect);
+        rect = sprites[i].rect;
+
+        SDL_GetMouseState(&mouse_x, &mouse_y);
+        rect = sprites[i].rect;
+        if (point_in_rect(mouse_x, mouse_y, rect)) {
+            rect.x -= 0.25*rect.w;
+            rect.y -= 0.25*rect.h;
+            rect.w *= 1.5;
+            rect.h *= 1.5;
         }
-        SDL_RenderCopy(env->renderer, sprites[i].texture, NULL, &sprites[i].rect);
+
+        if (env->disp_stage == END) { // grey background
+            SDL_SetRenderDrawColor(env->renderer, 255, 255, 255, 50);
+            SDL_RenderFillRect(env->renderer, &rect);
+        }
+        
+        SDL_RenderCopy(env->renderer, sprites[i].texture, NULL, &rect);
     }
 }
 
@@ -802,8 +817,7 @@ void disp_titlescreen(Env *env) {
     // SDL_RenderCopy(env->renderer, env->checkbox.textures[env->swap_allowed], NULL, &env->checkbox.rect);
 
     if (env->disp_stage == TITLE) {
-        SDL_RenderCopy(env->renderer, env->title_sprites[2].texture, NULL, &env->title_sprites[2].rect);
-        SDL_RenderCopy(env->renderer, env->title_sprites[3].texture, NULL, &env->title_sprites[3].rect);
+        disp_sprites(env, &env->title_sprites[2], 2);
     }
 
     else {
