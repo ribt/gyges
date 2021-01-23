@@ -33,6 +33,11 @@ struct available_piece {
     SDL_Rect rect;    
 };
 
+typedef struct {
+    size size;
+    position position;
+} piece;
+
 
 // display stages
 enum stage {TITLE, SOLO, MULTI, PLACEMENT, INGAME, END};
@@ -78,6 +83,7 @@ bool point_in_rect(int x, int y, SDL_Rect rect);
 void disp_sprites(Env *env, struct sprite sprites[], int len);
 void end_of_turn(Env *env);
 void play_as_bot(Env *env);
+void remote_plays(Env *env);
 
 
 int initial_piece_clicked(Env *env, int x, int y);
@@ -165,6 +171,8 @@ int main(int argc, char *argv[]) {
 
         if (env->current_player == env->BOT_P) {
             play_as_bot(env);
+        } else if (env->current_player == env->SOCKET_P) {
+            remote_plays(env);
         }
     }
 
@@ -227,7 +235,7 @@ void render(Env *env) {
         if (env->disp_stage == PLACEMENT) {
             disp_initial_pieces(env);
         } else if (env->disp_stage == INGAME) {
-            if (env->current_player != env->BOT_P) {
+            if (env->current_player != env->BOT_P && env->current_player != env->SOCKET_P) {
                 disp_controls(env);       
             }
         } else if (env->disp_stage == END) {
@@ -317,6 +325,57 @@ void play_as_bot(Env *env) {
     SDL_Delay(750);
 }
 
+void remote_plays(Env *env) {
+    piece r_piece;
+    direction r_direction;
+    bool done;
+
+    if (env->SOCKET_P == NO_PLAYER) {
+        return;
+    }
+    if (env->disp_stage == PLACEMENT) {
+        printf("\nattente d'une pièce pour placer\n");
+        if (recv(env->socket, &r_piece, sizeof(piece), 0) != SOCKET_ERROR) {
+            printf("reçu : size=%d line=%d column=%d\n", r_piece.size, r_piece.position.line, r_piece.position.column);
+            place_piece(env->game, r_piece.size, env->SOCKET_P, r_piece.position.column);
+            done = true;
+            for (size s = ONE; s <= THREE; s++) {
+                if (nb_pieces_available(env->game, s, env->SOCKET_P) > 0) {
+                    done = false;
+                }
+            }
+            if (done) {
+                env->current_player = next_player(env->current_player);
+                if (nb_pieces_available(env->game, ONE, env->current_player) == 0) {
+                    env->disp_stage = INGAME;
+                    sprintf(env->message, "%s, à toi de commencer à jouer !", player_name(env, env->current_player));
+                } else {
+                    sprintf(env->message, "%s, place tes pions.", player_name(env, env->current_player));
+                    enable_initial_pieces(env);
+                }
+            }
+        } else {printf("erreur\n");}
+    }
+    else if (env->disp_stage == INGAME) {
+        if (picked_piece_size(env->game) == NONE) {
+            printf("\nattente d'une pièce pour picker\n");
+            if (recv(env->socket, &r_piece, sizeof(piece), 0) != SOCKET_ERROR) {
+                printf("reçu : size=%d line=%d column=%d\n", r_piece.size, r_piece.position.line, r_piece.position.column);
+                pick_piece(env->game, env->SOCKET_P, r_piece.position.line, r_piece.position.column);
+            } else {printf("erreur\n");}
+        } else {
+            printf("\nattente d'une direction\n");
+            if (recv(env->socket, &r_direction, sizeof(direction), 0) != SOCKET_ERROR) {
+                printf("reçu : %d\n", r_direction);
+                move_piece(env->game, r_direction);
+                if (movement_left(env->game) == -1) {
+                    end_of_turn(env);
+                }
+            } else {printf("erreur\n");}
+        }
+    }
+}
+
 void destroy_env(Env *env) {
     destroy_game(env->game);
 
@@ -363,18 +422,24 @@ void destroy_env(Env *env) {
 }
 
 char *player_name(Env *env, player this_player) {
-    if (env->BOT_P == NO_PLAYER) {
+    if (env->BOT_P == NO_PLAYER && env->SOCKET_P == NO_PLAYER) {
         if (this_player == SOUTH_P) {
             return "Joueur SUD";
         }
         if (this_player == NORTH_P) {
             return "Joueur NORD";
         }
-    } else {
+    } else if (env->BOT_P != NO_PLAYER) {
         if (this_player == env->BOT_P) {
             return "Robot";
         } else {
             return "Humain";
+        }
+    } else {
+        if (this_player == env->SOCKET_P) {
+            return "Distant";
+        } else {
+            return "Local";
         }
     }
     
@@ -395,17 +460,25 @@ void start_game(Env *env) {
         env->BOT_P = NO_PLAYER;
         if (env->SOCKET_P == SOUTH_P) { // NORTH_P always hosts
             env->serv_sockets = host(PORT);
+            if (env->serv_sockets.s_sock == INVALID_SOCKET || env->serv_sockets.c_sock == INVALID_SOCKET) {
+                printf("échec de host\n");
+            }
             env->socket = env->serv_sockets.c_sock;
         } else if (env->SOCKET_P == NORTH_P) {
             env->socket = join("127.0.0.1", PORT); // TO DO : prompt IP
+            if (env->socket == INVALID_SOCKET) {
+                printf("échec de join\n");
+            }
         }
     }
 
-    if (rand()%2 == 0) {  // random choice of the first player
-        env->current_player = NORTH_P;
-    } else {
-        env->current_player = SOUTH_P;
-    }
+    // if (rand()%2 == 0) {  // random choice of the first player
+    //     env->current_player = NORTH_P;
+    // } else {
+    //     env->current_player = SOUTH_P;
+    // }
+
+    env->current_player = NORTH_P;
 
     if (env->current_player != env->BOT_P && env->current_player != env->SOCKET_P) {
         enable_initial_pieces(env);
@@ -906,7 +979,6 @@ int sprite_clicked(int x, int y, struct sprite sprites[], int len) {
     return -1;
 }
 
-
 int initial_piece_clicked(Env *env, int x, int y) {
     for (int i = 0; i <= DIMENSION; i++) {
         if (point_in_rect(x, y, env->initial_pieces[i].rect)) {
@@ -968,6 +1040,7 @@ void menu_choices(Env *env, SDL_Event *event) {
 }
 
 void drag_initial_pieces(Env *env, SDL_Event *event) {
+    piece s_piece;
     int piece_clicked;
     position pos_clicked;
     bool done;
@@ -982,6 +1055,14 @@ void drag_initial_pieces(Env *env, SDL_Event *event) {
         pos_clicked = position_clicked(env, event->button.x, event->button.y);
         if ((env->current_player == NORTH_P && pos_clicked.line == DIMENSION-1) || (env->current_player == SOUTH_P && pos_clicked.line == 0)) {
             if (place_piece(env->game, env->initial_pieces[env->dragging_piece].size, env->current_player, pos_clicked.column) == OK) {
+                if (env->SOCKET_P != NO_PLAYER) {
+                    s_piece.size = env->initial_pieces[env->dragging_piece].size;
+                    s_piece.position.line = pos_clicked.line;
+                    s_piece.position.column = pos_clicked.column;
+                    if (send(env->socket, &s_piece, sizeof(piece), 0) == SOCKET_ERROR)
+                        printf("L'envoi a échoué\n");
+                }
+
                 env->initial_pieces[env->dragging_piece].size = NONE;
 
                 done = true;
@@ -997,7 +1078,7 @@ void drag_initial_pieces(Env *env, SDL_Event *event) {
                         sprintf(env->message, "%s, à toi de commencer à jouer !", player_name(env, env->current_player));
                     } else {
                         sprintf(env->message, "%s, place tes pions.", player_name(env, env->current_player));
-                        if (env->current_player != env->BOT_P) {
+                        if (env->current_player != env->BOT_P && env->current_player != env->SOCKET_P) {
                             enable_initial_pieces(env);
                         }
                     }
@@ -1010,13 +1091,20 @@ void drag_initial_pieces(Env *env, SDL_Event *event) {
 
 void choose_piece_to_pick(Env *env, SDL_Event *event) {
     position pos_clicked;
+    piece s_piece;
 
     pos_clicked = position_clicked(env, event->button.x, event->button.y);
-    pick_piece(env->game, env->current_player, pos_clicked.line, pos_clicked.column);
+    if (pick_piece(env->game, env->current_player, pos_clicked.line, pos_clicked.column) == OK && env->SOCKET_P != NO_PLAYER) {
+        s_piece.position.line = pos_clicked.line;
+        s_piece.position.column = pos_clicked.column;
+        if (send(env->socket, &s_piece, sizeof(piece), 0) == SOCKET_ERROR)
+            printf("L'envoi a échoué\n");
+    }
 }
 
 void choose_direction(Env *env, SDL_Event *event) {
     int dir_clicked;
+    direction s_direction;
 
     dir_clicked = sprite_clicked(event->button.x, event->button.y, env->controls, 7);
 
@@ -1032,6 +1120,11 @@ void choose_direction(Env *env, SDL_Event *event) {
     }
     else if (dir_clicked != -1) {
         move_piece(env->game, dir_clicked);
+        if (env->SOCKET_P != NO_PLAYER) {
+            s_direction = dir_clicked;
+            if (send(env->socket, &s_direction, sizeof(direction), 0) == SOCKET_ERROR)
+                printf("L'envoi a échoué\n");
+        }
     }
 
     if (movement_left(env->game) == 0) {
