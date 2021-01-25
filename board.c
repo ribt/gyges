@@ -138,11 +138,27 @@ player next_player(player current_player) {
     }
 }
 
+bool playful_line(board game, int line) {
+    for(int column = 0; column < DIMENSION; column++) {
+        if (get_piece_size(game, line, column) == NONE || get_piece_size(game, line, column) == ONE) {
+            return true;
+        }
+        for (int testing_direction = GOAL; testing_direction <= WEST; testing_direction++) {
+            if (is_move_possible(game, testing_direction)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 int southmost_occupied_line(board game) {
     for(int line = 0; line < DIMENSION; line++) {
-        for (int column = 0; column < DIMENSION; column++) {
-            if (get_piece_size(game, line, column) != NONE) {
-                return line;
+        if (playful_line(game, line)) {
+            for (int column = 0; column < DIMENSION; column++) {
+                if (get_piece_size(game, line, column) != NONE) {
+                    return line;
+                }
             }
         }
     }
@@ -151,9 +167,11 @@ int southmost_occupied_line(board game) {
 
 int northmost_occupied_line(board game) {
     for(int line = DIMENSION-1; line >= 0; line--) {
-        for (int column = 0; column < DIMENSION; column++) {
-            if (get_piece_size(game, line, column) != NONE) {
-                return line;
+        if (playful_line(game, line)) {
+            for (int column = 0; column < DIMENSION; column++) {
+                if (get_piece_size(game, line, column) != NONE) {
+                    return line;
+                }
             }
         }
     }
