@@ -23,7 +23,9 @@ Il est également possible de jouer dans le terminal si vous n'avez pas SDL2 en 
 ```
 $ ./gyges
 ```
-tout simplement ;)
+### Contrôles
+
+Le jeu se joue entièrement à la souris. L'écran d'accueil permet d'activer ou non la variante autorisant le *swap* (déplacer une pièce lorsqu'on arrive dessus) et de choisir le niveau de l'ordinateur (on peut également jouer sans ordinateur, à deux sur le même ordi). Le positionnement des pièces fonctionne par glisser-déposer. Ensuite, il suffit de cliquer sur une pièce pour la sélectionner et de cliquer sur les boutons de direction pour la déplacer.
 
 ## TO DO
 - [x] Ajouter un bot pour jouer en solo.
